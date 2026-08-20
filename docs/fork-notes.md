@@ -54,11 +54,11 @@ Portuguese-set browser falls back to `en-US` (the configured `fallbackLng`). The
 browser-reachable locale set for this deployment is therefore exactly **`{en-US, es-ES}`** —
 both were rebranded in full for every key that exists in each file.
 
-The other 11 locale files (`de-DE`, `el-GR`, `fr-FR`, `id-ID`, `ko-KR`, `mk-MK`, `nl-NL`,
+The other 10 locale files (`de-DE`, `el-GR`, `fr-FR`, `id-ID`, `ko-KR`, `mk-MK`, `nl-NL`,
 `ru-RU`, `tr-TR`, `uk-UA`) plus `i18n/schema.json` (a dev-tooling JSON-schema file, never
 rendered to a user) still contain "Kaneo" strings. **Classified customer-facing-out-of-scope
 by construction, not silently skipped**: no team member's browser will ever resolve to one of
-these locales, so their content is unreachable in this deployment. Editing all 11 (plus
+these locales, so their content is unreachable in this deployment. Editing all 10 (plus
 schema) would be pure upstream-file churn against languages nobody at Tere reads — directly
 contrary to D-25's "minimize upstream-file churn, minimize merge-conflict surface" discipline
 — for zero user-facing benefit. If Tere ever needs a `pt-*` locale, that is new scope for a
