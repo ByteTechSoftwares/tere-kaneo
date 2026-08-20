@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
+import { AnotaChatBubble } from "@/anota/chat-bubble";
 import { ToastProvider } from "@/components/ui/toast";
 import type { User } from "@/types/user";
 
@@ -16,6 +17,9 @@ function RootComponent() {
       <div className="flex h-svh w-full flex-row overflow-x-hidden overflow-y-hidden bg-background scrollbar-thin scrollbar-thumb-border scrollbar-track-muted">
         <Outlet />
       </div>
+      {/* D-36: fixed, bottom-right, outside the overflow-clipped flex
+          container above so the panel is never clipped. */}
+      <AnotaChatBubble />
     </ToastProvider>
   );
 }
