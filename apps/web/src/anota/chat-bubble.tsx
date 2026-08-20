@@ -171,7 +171,7 @@ export function AnotaChatBubble() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 16 }}
             transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-            className="pointer-events-auto fixed right-6 bottom-24 h-[min(600px,80vh)] w-[380px] max-w-[95vw]"
+            className="pointer-events-auto fixed right-6 bottom-24 h-[min(600px,80vh)] w-[380px] max-w-[calc(100vw-3rem)]"
           >
             <ChatWindow
               messages={messages}
