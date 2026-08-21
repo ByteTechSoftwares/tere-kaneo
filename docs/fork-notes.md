@@ -255,6 +255,39 @@ every copied asset filename are present in the build output and correctly refere
 
 ### CI image pipeline (INFRA-08)
 
-See the Plan 05 CI section below (added alongside this one, same branch/PR) for
-`build-image.yml`, the Actions re-enable/inherited-workflow-disable, and the pinned GHCR
-image build.
+GitHub Actions was disabled on `ByteTechSoftwares/tere-kaneo` (a fork setting, since
+2026-08-11) so the 12-13 inherited upstream workflow files stayed dormant despite living
+in the repo (D-25: keep the files, don't delete -- they're needed for future upstream
+merges to reconcile against). This plan:
+
+1. Re-enabled Actions (`PUT /repos/ByteTechSoftwares/tere-kaneo/actions/permissions`,
+   `enabled: true, allowed_actions: all`).
+2. **Immediately** disabled every inherited workflow file individually
+   (`gh workflow disable <file>`), before any of them could fire: `auto-assign.yml`,
+   `auto-merge.yml`, `ci.yml`, `deploy-site.yml`, `docker.yml`, `helm-chart.yml`,
+   `issue-notify.yml`, `nightly.yml`, `publish-mcp.yml`, `publish-planka-import.yml`,
+   `release-notify.yml`, `release.yml`, `update-contributors.yml` (13 files -- the
+   CONTEXT.md estimate of "12" undercounted by one; `publish-planka-import.yml` is a
+   newer addition from the v2.21.0 upstream merge (02.1-01) not present when that
+   estimate was written). All 13 confirmed `disabled_manually` via
+   `gh workflow list --all`.
+3. Added `.github/workflows/build-image.yml` -- the fork's own pinned-image pipeline,
+   modeled on upstream's `docker.yml` (Pattern 3 in 02.1-RESEARCH.md) but narrowed to a
+   single target: `workflow_dispatch` only (no `push`/`pull_request` trigger, so
+   re-enabling Actions cannot fire a build), a required `version` string input, job
+   permissions scoped to `contents: read` + `packages: write` (no broader token scope),
+   pinned action versions (`checkout@v7.0.1`, `setup-buildx-action@v4`,
+   `login-action@v4`, `metadata-action@v6`, `build-push-action@v7`), `linux/amd64` only
+   (upstream's `arm64` leg dropped -- a Render deploy target doesn't need it), image
+   name `bytetechsoftwares/tere-kaneo`, and a single version-pinned tag from the
+   `version` input (no `latest` tag, unlike upstream's optional `latest` toggle --
+   deliberately omitted per D-25 "never :latest").
+4. GHCR auth: tried the default `secrets.GITHUB_TOKEN` first (Pitfall 6's
+   recommendation), scoped via the job's `packages: write` permission -- **not** the
+   PAT (`GH_PACKAGE_TOKEN`) upstream's own `docker.yml` uses. See the Task 3 section
+   below for whether the default token succeeded or a PAT fallback was required.
+
+### CI image build result (Task 3)
+
+See the version-bump entry this plan adds to `deploy/render.md` for the pinned version,
+GHCR verification evidence, and the rollback tag.
