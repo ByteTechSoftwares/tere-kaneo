@@ -306,3 +306,11 @@ digest `sha256:154336efecf9564baca3eac6f51f099db376f897f1b3106d76492e9a6cb5f6dc`
 Full detail, rollback tag, and version-scheme note: `deploy/render.md`'s 2026-08-21
 version-bump log entry (shop-ops repo). The live Render service was not touched -- no
 Render API call was made from this plan.
+
+**2026-08-21 follow-up:** removed the standalone mascot tile (`/anota-mascot.svg` in its
+own dark rounded tile, added by this plan) from `apps/web/src/components/auth/layout.tsx`
+-- it duplicated the mascot already present inside the `<Logo>` wordmark directly below it
+on the login screen (operator request). The `<Logo>` line is untouched; the mascot glyph
+remains everywhere else it was placed (bubble, empty states). Shipped as
+`ghcr.io/bytetechsoftwares/tere-kaneo:1.0.1`, deploy detail in `deploy/render.md`
+(shop-ops repo).
