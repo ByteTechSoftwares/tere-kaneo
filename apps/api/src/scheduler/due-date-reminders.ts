@@ -94,7 +94,7 @@ async function processReminder(
 ) {
   if (!task.userId) return;
 
-  // Insert sent record first — if it already exists, skip notification
+  // Insert sent record first; if it already exists, skip notification
   try {
     const [inserted] = await db
       .insert(taskReminderSentTable)
@@ -134,9 +134,10 @@ async function processReminder(
   });
 }
 
-export async function checkDueDateReminders(): Promise<void> {
+export async function checkDueDateReminders(): Promise<{ degraded: boolean }> {
   const now = new Date();
   const windows = buildWindows(now);
+  let degraded = false;
 
   for (const window of Object.values(windows)) {
     try {
@@ -150,6 +151,7 @@ export async function checkDueDateReminders(): Promise<void> {
         try {
           await processReminder(task, window.type, window.notificationType);
         } catch (error) {
+          degraded = true;
           console.error("Failed to process due date reminder", {
             taskId: task.id,
             reminderType: window.type,
@@ -158,10 +160,13 @@ export async function checkDueDateReminders(): Promise<void> {
         }
       }
     } catch (error) {
+      degraded = true;
       console.error("Failed to query tasks for due date reminders", {
         reminderType: window.type,
         error,
       });
     }
   }
+
+  return { degraded };
 }

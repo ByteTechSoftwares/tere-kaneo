@@ -19,6 +19,7 @@ export const projectSchema = v.object({
   createdAt: v.date(),
   isPublic: v.nullable(v.boolean()),
   archivedAt: v.nullable(v.date()),
+  position: v.number(),
 });
 
 export const taskSchema = v.object({
@@ -265,6 +266,7 @@ export const configSchema = v.object({
   disableRegistration: v.nullable(v.boolean()),
   disablePasswordRegistration: v.nullable(v.boolean()),
   disableEmailOtpSignIn: v.nullable(v.boolean()),
+  disableWorkspaceCreation: v.nullable(v.boolean()),
   isDemoMode: v.boolean(),
   hasSmtp: v.boolean(),
   hasGithubSignIn: v.nullable(v.boolean()),
