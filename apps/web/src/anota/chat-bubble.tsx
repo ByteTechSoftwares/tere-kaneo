@@ -6,10 +6,13 @@
 // in-flight send survives <ChatWindow/> unmounting when the user
 // collapses the panel mid-turn.
 //
-// Placeholder mascot only (Lucide MessageCircle on the accent fill) —
-// the real mascot lands in a later, operator-gated plan (D-42).
+// Launcher avatar is the Anota mascot (D-42, 02.1-05). Per
+// docs/brand-kit.md the mascot's body is drawn in a light fill with no
+// background of its own, so it needs a constant dark ground in both
+// themes — the launcher circle is fixed-dark (`bg-[#141414]`), not the
+// theme-following `--primary` token, matching "a fixed-colour launcher
+// is what every chat widget does" from the brand kit.
 import { AnimatePresence, motion } from "framer-motion";
-import { MessageCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider/hooks/use-auth";
 import { cn } from "@/lib/cn";
@@ -196,11 +199,16 @@ export function AnotaChatBubble() {
           // absolutely-positioned unread-badge span below — no separate
           // `relative` needed (and adding one risks losing to `fixed` in
           // Tailwind's generated cascade order).
-          "pointer-events-auto fixed right-6 bottom-6 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          "pointer-events-auto fixed right-6 bottom-6 flex size-14 items-center justify-center rounded-full bg-[#141414] shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           isExpanded && "pointer-events-none opacity-0",
         )}
       >
-        <MessageCircle className="size-6" aria-hidden="true" />
+        <img
+          src="/anota-mascot.svg"
+          alt=""
+          aria-hidden="true"
+          className="size-9"
+        />
         {hasUnread ? (
           <span
             aria-hidden="true"

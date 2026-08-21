@@ -1,0 +1,60 @@
+name: Build & publish Anota image to GHCR
+
+# INFRA-08 / D-25: this is the ByteTech fork's OWN pinned-image pipeline,
+# separate from every inherited upstream workflow (all disabled individually
+# after re-enabling Actions -- see docs/fork-notes.md Phase 02.1 Plan 05).
+#
+# workflow_dispatch ONLY -- no push/pull_request trigger, so re-enabling
+# Actions on this repo cannot fire a build accidentally, and every image
+# this produces is deliberately versioned (never a floating/moving tag),
+# per D-25 fork discipline ("never :latest").
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag for the image (e.g. 1.0.0)'
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: bytetechsoftwares/tere-kaneo
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: type=raw,value=${{ inputs.version }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile.kaneo
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
