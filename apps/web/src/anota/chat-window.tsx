@@ -8,7 +8,7 @@
 //
 // No streaming (RESEARCH-confirmed): sends are optimistic-append +
 // indefinite "Anota is thinking…" indicator + one awaited JSON reply.
-import { MessageCircle, Send, X } from "lucide-react";
+import { Send, X } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 
@@ -86,8 +86,13 @@ interface EmptyStateProps {
 function EmptyState({ onSuggestionClick }: EmptyStateProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-8 text-center">
-      <div className="flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
-        <MessageCircle className="size-5" aria-hidden="true" />
+      <div className="flex size-12 items-center justify-center rounded-full bg-[#141414]">
+        <img
+          src="/anota-mascot.svg"
+          alt=""
+          aria-hidden="true"
+          className="size-8"
+        />
       </div>
       <div className="flex flex-col gap-1">
         <h2 className="font-heading font-semibold text-[16px] text-foreground leading-tight">

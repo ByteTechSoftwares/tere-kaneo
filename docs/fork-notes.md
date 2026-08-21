@@ -179,10 +179,82 @@ predate and are unrelated to this plan's string-only changes:
 
 ### Forward references
 
-- **Plan 05** (asset swap, gated on brand-kit approval, D-43): swaps `favicon.svg`,
-  `logo-light.svg`, `logo-dark.svg`, `apple-touch-icon.png`, and the manifest icon PNGs to
-  Anota artwork. Filenames are unchanged by this plan on purpose so Plan 05 only has to
-  replace file *contents*.
-- **Plans 01/04** (in-app chat panel mount): will add new Anota-namespaced component files
-  under `apps/web/src` — no upstream-file edits expected there beyond the app-shell mount
-  point (per D-40 override-first), to be documented here when that plan lands.
+- **Plans 01/04** (in-app chat panel mount): added new Anota-namespaced component files
+  under `apps/web/src/anota/` — no upstream-file edits beyond the app-shell mount point
+  (per D-40 override-first). Documented in the Plan 02.1-04 section below (not this
+  register's scope at the time it was written; see git history for that plan's own commit).
+
+## Phase 02.1 Plan 05 — Brand assets + mascot placements + CI image pipeline (BRAND-01, INFRA-08)
+
+Branch: `anota/02.1-05-brand-image`. Scope: the operator-approved brand kit
+(`docs/brand-kit.md`, approved 2026-08-20) applied to the fork as content swaps under
+existing filenames (D-40's preferred, lowest-churn path — no component logic or path
+edit), plus the mascot's three D-42 placements, plus the from-scratch CI image pipeline.
+
+### Asset content swap (D-40 asset-swap seam, zero upstream-file path edits)
+
+The nine approved files from `docs/brand-assets/` (shop-ops repo) were copied
+byte-for-byte into `apps/web/public/` under their existing filenames — `favicon.svg`,
+`favicon.ico`, `favicon-96x96.png`, `apple-touch-icon.png`, `logo-light.svg`,
+`logo-dark.svg`, `web-app-manifest-192x192.png`, `web-app-manifest-512x512.png` — plus
+the new `anota-mascot.svg`. Verified byte-identical (`cmp`) against the source
+immediately after copy. No `index.html`/`site.webmanifest`/`logo.tsx` path edit was
+needed — Plan 02 already pointed every one of those references at these exact filenames
+in anticipation of this swap.
+
+### Mascot placements (D-42 — exactly the three specified, no more)
+
+| Placement | File | Mechanism |
+|---|---|---|
+| Chat-bubble launcher avatar (default/idle state) | `apps/web/src/anota/chat-bubble.tsx` | Replaced the placeholder Lucide `MessageCircle` with `<img src="/anota-mascot.svg">`. The launcher's background changed from the theme-following `bg-primary` to a fixed `bg-[#141414]` — see "Fixed-dark mascot ground" below. |
+| Panel empty state | `apps/web/src/anota/chat-window.tsx` | Same swap in `EmptyState`: `MessageCircle` → mascot `<img>`, container background fixed to `bg-[#141414]`. |
+| Login screen, supplementing the wordmark | `apps/web/src/components/auth/layout.tsx` | Added a new mascot tile (`bg-[#141414]` rounded square) above the existing `<Logo>` — the wordmark is unchanged, the mascot is additive per D-42's "supplements, does not replace" instruction. |
+
+No other placement was added (no favicon, no loading spinner, no page header) — matching
+the UI-SPEC's explicit "D-42's list is deliberately short."
+
+### Fixed-dark mascot ground — a deliberate deviation from the UI-SPEC's `--primary` usage
+
+`docs/brand-kit.md` (Plan 03, written after the UI-SPEC's Color contract was locked)
+specifies the mascot's body has no background of its own and is "specified to sit on a
+constant dark ground in both themes — the launcher circle, the login tile, and the
+empty-state container are all ours to colour, and a fixed-colour launcher is what every
+chat widget does." `var(--primary)` is theme-following (`neutral-800` light /
+`neutral-100` dark per the UI-SPEC Color contract) — using it as the launcher/empty-state
+container fill would put the light-mode-dark mascot on a *light* background in dark mode,
+exactly the failure the brand kit calls out. All three mascot-hosting containers
+(launcher, empty state, login tile) were changed to a fixed `bg-[#141414]` instead. This
+is an inline Tailwind arbitrary value, not a new CSS variable/token — D-41 ("no custom
+recolor," no new token in `index.css`) is respected; the two source documents were
+reconciled in favor of the more specific, later brand-kit instruction. The
+unread-message badge, composer send button, and bubble-launcher focus ring remain on
+`var(--primary)`/`var(--ring)` exactly as the UI-SPEC's Color contract specifies — only
+the mascot-hosting fill changed.
+
+### SC5 sweep — post-application, full re-run
+
+Command: `rg -n "Kaneo" apps/web/src apps/web/index.html apps/web/public`. Every hit is
+one of: already classified by Plan 02's table above, or newly classified below (both new
+categories are test-only/comment-only, never rendered to a user):
+
+| Hit | Classification |
+|---|---|
+| `apps/web/src/routes/invitation/accept.$inviteId.test.tsx:48` (`workspaceName: "Kaneo"`) | internal identifier — test fixture literal, never shipped in the production bundle (`*.test.tsx` is excluded from the Vite build) |
+| `apps/web/src/lib/generate-project-id.test.ts:6,15` (`generateProjectSlug("Kaneo")`) | internal identifier — same, test fixture only |
+| `apps/web/src/anota/chat-bubble.tsx:164` (code comment `// ...authenticated Kaneo page...`) | internal identifier — source comment, never rendered; will be corrected opportunistically on next touch of this file, not worth a separate edit here |
+| Every hit in Plan 02's own table (billing.tsx Kaneo-Cloud copy, `KaneoBranding`/`KaneoIssueLink`/`KaneoMention` identifiers, `breadcrumbKaneo` key reference) | unchanged — re-confirmed still classified, still accurate |
+
+No unclassified user-visible hit remains.
+
+### Fork typecheck/build
+
+`pnpm build` inside `apps/web` (the actual deploy artifact per this repo's own
+precedent) succeeded cleanly in 6.15s. `dist/index.html`, `dist/site.webmanifest`, and
+every copied asset filename are present in the build output and correctly reference
+"Anota" throughout. `dist/` is gitignored, not committed.
+
+### CI image pipeline (INFRA-08)
+
+See the Plan 05 CI section below (added alongside this one, same branch/PR) for
+`build-image.yml`, the Actions re-enable/inherited-workflow-disable, and the pinned GHCR
+image build.
