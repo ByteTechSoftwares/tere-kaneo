@@ -289,5 +289,20 @@ merges to reconcile against). This plan:
 
 ### CI image build result (Task 3)
 
-See the version-bump entry this plan adds to `deploy/render.md` for the pinned version,
-GHCR verification evidence, and the rollback tag.
+Built from fork `main` @ `566455a1` (PR #4 merge commit) via `gh workflow run
+build-image.yml -f version=1.0.0`. Run `32445586105`, watched to a terminal state
+(`gh run watch --exit-status`), `conclusion: success` -- the default `secrets.GITHUB_TOKEN`
+had `packages: write` on this org's GHCR (Assumption A1 in 02.1-RESEARCH.md confirmed;
+no PAT fallback / `GH_PACKAGE_TOKEN` secret was needed).
+
+`ghcr.io/bytetechsoftwares/tere-kaneo:1.0.0` verified present and pullable in GHCR by two
+independent checks, not the Actions log alone: (1) `gh api
+orgs/ByteTechSoftwares/packages/container/tere-kaneo/versions` shows tag `1.0.0` on
+digest `sha256:154336efecf9564baca3eac6f51f099db376f897f1b3106d76492e9a6cb5f6dc`; (2)
+`docker manifest inspect ghcr.io/bytetechsoftwares/tere-kaneo:1.0.0` (authenticated via
+`gh auth token`) returned a real OCI image index with a `linux/amd64` manifest, not an
+`unauthorized`/404 error. Package visibility: `private`, ByteTech org.
+
+Full detail, rollback tag, and version-scheme note: `deploy/render.md`'s 2026-08-21
+version-bump log entry (shop-ops repo). The live Render service was not touched -- no
+Render API call was made from this plan.
