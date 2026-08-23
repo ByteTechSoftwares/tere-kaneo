@@ -46,6 +46,7 @@ import { Button } from "../ui/button";
 import { ContextMenu, ContextMenuTrigger } from "../ui/context-menu";
 import TaskCardContextMenuContent from "./task-card-context-menu/task-card-context-menu-content";
 import { TaskLabels } from "./task-labels";
+import { ANOTA_VEHICLE_BOARD_SLUG, VehicleCover } from "./vehicle-cover";
 
 type TaskCardProps = {
   task: Task;
@@ -204,6 +205,11 @@ function TaskCard({ task, disableDragDrop = false }: TaskCardProps) {
               }
             }}
           >
+            {/* Phase 3 / PHOTO-04 / D-25 mount point: vehicle-board-only cover thumbnail */}
+            {project?.slug === ANOTA_VEHICLE_BOARD_SLUG && (
+              <VehicleCover coverAssetId={task.coverAssetId} />
+            )}
+
             {showTaskNumbers && (
               <div className="mb-2 text-[10px] font-mono text-muted-foreground/90">
                 {project?.slug}-{task.number}
