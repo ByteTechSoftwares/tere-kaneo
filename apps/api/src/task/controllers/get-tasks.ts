@@ -12,6 +12,7 @@ import {
 import { HTTPException } from "hono/http-exception";
 import db from "../../database";
 import {
+  assetTable,
   columnTable,
   externalLinkTable,
   labelTable,
@@ -19,6 +20,7 @@ import {
   taskTable,
   userTable,
 } from "../../database/schema";
+import { buildTaskCoverMap } from "./anota-vehicle-cover";
 
 type GetTasksOptions = {
   assigneeId?: string;
@@ -173,6 +175,19 @@ async function getTasks(projectId: string, options: GetTasksOptions = {}) {
           .where(inArray(externalLinkTable.taskId, taskIds))
       : [];
 
+  // Phase 3 Plan 02 / PHOTO-04 / D-25 mount point: earliest image asset per task.
+  const coverWhere = and(
+    inArray(assetTable.taskId, taskIds),
+    eq(assetTable.kind, "image"),
+  );
+  const coverAssetsData =
+    taskIds.length > 0
+      ? await db
+          .select()
+          .from(assetTable)
+          .where(coverWhere)
+          .orderBy(asc(assetTable.createdAt))
+      : [];
   const taskLabelsMap = new Map<
     string,
     Array<{ id: string; name: string; color: string }>
@@ -214,6 +229,7 @@ async function getTasks(projectId: string, options: GetTasksOptions = {}) {
         : null,
     });
   }
+  const taskCoverMap = buildTaskCoverMap(coverAssetsData);
 
   const projectColumns = await db
     .select()
@@ -233,6 +249,7 @@ async function getTasks(projectId: string, options: GetTasksOptions = {}) {
         ...task,
         labels: taskLabelsMap.get(task.id) || [],
         externalLinks: taskExternalLinksMap.get(task.id) || [],
+        coverAssetId: taskCoverMap.get(task.id) ?? null,
       })),
   }));
 
@@ -242,6 +259,7 @@ async function getTasks(projectId: string, options: GetTasksOptions = {}) {
       ...task,
       labels: taskLabelsMap.get(task.id) || [],
       externalLinks: taskExternalLinksMap.get(task.id) || [],
+      coverAssetId: taskCoverMap.get(task.id) ?? null,
     }));
 
   const plannedTasks = paginatedTasks
@@ -250,6 +268,7 @@ async function getTasks(projectId: string, options: GetTasksOptions = {}) {
       ...task,
       labels: taskLabelsMap.get(task.id) || [],
       externalLinks: taskExternalLinksMap.get(task.id) || [],
+      coverAssetId: taskCoverMap.get(task.id) ?? null,
     }));
 
   return {

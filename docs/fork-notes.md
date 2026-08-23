@@ -314,3 +314,38 @@ on the login screen (operator request). The `<Logo>` line is untouched; the masc
 remains everywhere else it was placed (bubble, empty states). Shipped as
 `ghcr.io/bytetechsoftwares/tere-kaneo:1.0.1`, deploy detail in `deploy/render.md`
 (shop-ops repo).
+
+## Phase 03 Plan 02 — Vehicle-card cover thumbnail (PHOTO-04)
+
+Branch: `anota/03-02-vehicle-cover`. Scope: cover thumbnail on the vehicles board only.
+
+### Upstream files edited directly, and why no override seam existed
+
+| File | What changed | Why a direct edit (no seam) |
+|---|---|---|
+| `apps/api/src/task/controllers/get-tasks.ts` | One asset query (`assetTable` filtered to `kind = "image"`, ordered oldest-first) and one map construction (`buildTaskCoverMap`), then `coverAssetId` added to all three task-mapping spreads (`columns[].tasks`, `archivedTasks`, `plannedTasks`) | No seam: the board payload is assembled entirely inside this controller and there is no plugin/decorator point that can add a field to it. All reusable logic was moved into the new `anota-vehicle-cover.ts` to keep this edit minimal. |
+| `apps/web/src/components/kanban-board/task-card.tsx` | One import plus one slug-gated render (`project?.slug === ANOTA_VEHICLE_BOARD_SLUG`) above the title block | No seam: `TaskCard` is the single card renderer for BOTH boards with no per-board component split and no render-slot prop, so a mount point inside it is the only way to reach the vehicles board without also changing the task board. |
+
+Fork-owned (not upstream edits): `apps/api/src/task/controllers/anota-vehicle-cover.ts`
+(new, exports `buildTaskCoverMap`), `tests/api/task/anota-vehicle-cover.test.ts` (new),
+`apps/web/src/components/kanban-board/vehicle-cover.tsx` (new, exports
+`ANOTA_VEHICLE_BOARD_SLUG` and `VehicleCover`), `apps/web/src/components/kanban-board/vehicle-cover.test.tsx`
+(new), and the one-line optional `coverAssetId` field added to `apps/web/src/types/task/index.ts`.
+
+**Upstream-merge re-check note:** `coverAssetId` is optional on the web `Task` type, so a
+future upstream merge that rewrites `get-tasks.ts`'s three task-mapping spreads
+(`columns[].tasks`, `archivedTasks`, `plannedTasks`) would silently drop the field with
+**no type error** and thumbnails would simply vanish. Re-check all three spread sites on
+every future D-25 upstream merge.
+
+### CI image build result (Task 3)
+
+Built from fork `main` (post-merge of this plan's PR) via `gh workflow run
+build-image.yml -f version=1.1.0`. `1.1.0` is a minor bump over the live `1.0.1` because
+this adds a feature; ByteTech's image line is versioned independently of upstream's
+numbers and is never `:latest` (D-25).
+
+Full run id, GHCR verification, and rollback tag: `deploy/render.md`'s Phase 03 Plan 02
+row (shop-ops repo). The live Render service was **not** touched by this plan -- no
+Render API call was made -- production stays on `1.0.1` until plan 03-05's gated
+cutover.
