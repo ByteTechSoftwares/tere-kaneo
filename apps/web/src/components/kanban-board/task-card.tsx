@@ -207,7 +207,11 @@ function TaskCard({ task, disableDragDrop = false }: TaskCardProps) {
           >
             {/* Phase 3 / PHOTO-04 / D-25 mount point: vehicle-board-only cover thumbnail */}
             {project?.slug === ANOTA_VEHICLE_BOARD_SLUG && (
-              <VehicleCover coverAssetId={task.coverAssetId} />
+              <VehicleCover
+                taskId={task.id}
+                projectId={task.projectId}
+                coverAssetId={task.coverAssetId}
+              />
             )}
 
             {showTaskNumbers && (

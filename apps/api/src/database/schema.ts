@@ -426,6 +426,12 @@ export const taskTable = pgTable(
     priority: text("priority").default("low").notNull(),
     startDate: timestamp("start_date", { mode: "date" }),
     dueDate: timestamp("due_date", { mode: "date" }),
+    // Phase 4 Plan 06 (D-16, D-25 mount point): explicit vehicle-card cover
+    // override. Nullable, no default, no FK to assetTable — null means "no
+    // explicit choice, fall back to earliest-attached" (anota-vehicle-cover.ts),
+    // and a dangling id (its asset since deleted) must degrade the same way
+    // rather than block the delete or strand the row.
+    coverAssetId: text("cover_asset_id"),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" })
       .defaultNow()
