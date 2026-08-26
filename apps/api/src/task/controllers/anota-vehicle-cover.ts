@@ -15,11 +15,21 @@
 // wins ONLY when it still points at an asset actually attached to that same
 // task (an id whose asset has since been removed, or that belongs to a
 // different task, degrades straight back to earliest-wins rather than
-// rendering a broken thumbnail or leaking another card's photo).
-import { and, eq } from "drizzle-orm";
+// rendering a broken thumbnail or leaking another card's photo). This file
+// also exposes the PUT /task/anota-cover/:taskId route (set/clear) and a
+// GET beside it (list a task's cover candidates) as a small Hono sub-router
+// — the only mount point task/index.ts takes is importing and registering
+// that router.
+import { and, asc, eq } from "drizzle-orm";
+import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { validator } from "hono-openapi";
+import * as v from "valibot";
+import { requireEntitlement } from "../../billing/require-entitlement-middleware";
 import db from "../../database";
 import { assetTable, taskTable } from "../../database/schema";
+import { requireWorkspacePermission } from "../../utils/require-workspace-permission";
+import { workspaceAccess } from "../../utils/workspace-access-middleware";
 
 type CoverAssetRow = {
   taskId: string | null;
@@ -133,3 +143,78 @@ export async function clearAnotaCover(taskId: string) {
 
   return updatedTask;
 }
+
+/**
+ * Lists a task's own attached images (oldest-first) plus which one is
+ * currently the effective cover — the read side the dashboard's picker
+ * affordance needs, since board summaries only carry the resolved
+ * `coverAssetId`, never the full candidate list.
+ */
+export async function listAnotaCoverCandidates(taskId: string) {
+  const [task] = await db
+    .select({ id: taskTable.id, coverAssetId: taskTable.coverAssetId })
+    .from(taskTable)
+    .where(eq(taskTable.id, taskId))
+    .limit(1);
+
+  if (!task) {
+    throw new HTTPException(404, { message: "Task not found" });
+  }
+
+  const images = await db
+    .select({ id: assetTable.id, createdAt: assetTable.createdAt })
+    .from(assetTable)
+    .where(and(eq(assetTable.taskId, taskId), eq(assetTable.kind, "image")))
+    .orderBy(asc(assetTable.createdAt));
+
+  const coverMap = buildTaskCoverMap(
+    images.map((image) => ({
+      taskId,
+      id: image.id,
+      createdAt: image.createdAt,
+    })),
+    new Map([[taskId, task.coverAssetId]]),
+  );
+
+  return {
+    coverAssetId: coverMap.get(taskId) ?? null,
+    images,
+  };
+}
+
+// Sub-router mounted by task/index.ts at "/anota-cover" — the file's only
+// upstream mount point stays an import plus one `.route()` call (D-25).
+export const anotaCoverRoutes = new Hono<{
+  Variables: {
+    userId: string;
+  };
+}>()
+  .get(
+    "/:taskId",
+    validator("param", v.object({ taskId: v.string() })),
+    workspaceAccess.fromTaskId(),
+    async (c) => {
+      const { taskId } = c.req.valid("param");
+      const result = await listAnotaCoverCandidates(taskId);
+
+      return c.json(result);
+    },
+  )
+  .put(
+    "/:taskId",
+    validator("param", v.object({ taskId: v.string() })),
+    validator("json", v.object({ assetId: v.optional(v.string()) })),
+    workspaceAccess.fromTaskId(),
+    requireWorkspacePermission({ task: ["update"] }),
+    requireEntitlement,
+    async (c) => {
+      const { taskId } = c.req.valid("param");
+      const { assetId } = c.req.valid("json");
+
+      const task = assetId
+        ? await setAnotaCover(taskId, assetId)
+        : await clearAnotaCover(taskId);
+
+      return c.json(task);
+    },
+  );

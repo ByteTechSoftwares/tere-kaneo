@@ -25,6 +25,7 @@ import {
   validateDateRange,
 } from "../utils/validate-dates";
 import { workspaceAccess } from "../utils/workspace-access-middleware";
+import { anotaCoverRoutes } from "./controllers/anota-vehicle-cover";
 import bulkUpdateTasks from "./controllers/bulk-update-tasks";
 import createTask from "./controllers/create-task";
 import deleteTask from "./controllers/delete-task";
@@ -898,6 +899,10 @@ const task = new Hono<{
 
       return c.json(task);
     },
-  );
+  )
+  // Phase 4 Plan 06 (D-16, D-25 mount point): the vehicle-card cover-picker
+  // door — an import plus this one .route() call, all logic lives in the
+  // Anota-namespaced controller file.
+  .route("/anota-cover", anotaCoverRoutes);
 
 export default task;

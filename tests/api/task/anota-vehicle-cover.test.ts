@@ -21,6 +21,7 @@ vi.mock("../../../apps/api/src/database", () => ({
 import {
   buildTaskCoverMap,
   clearAnotaCover,
+  listAnotaCoverCandidates,
   setAnotaCover,
 } from "../../../apps/api/src/task/controllers/anota-vehicle-cover";
 
@@ -216,6 +217,56 @@ describe("clearAnotaCover", () => {
     mockUpdate.mockReturnValueOnce(makeChain([]));
 
     await expect(clearAnotaCover("task-missing")).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+});
+
+describe("listAnotaCoverCandidates", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("reports the explicit cover when it is still attached", async () => {
+    mockSelect
+      .mockReturnValueOnce(
+        makeChain([{ id: "task-1", coverAssetId: "asset-2" }]),
+      )
+      .mockReturnValueOnce(
+        makeChain([
+          { id: "asset-1", createdAt: "2026-01-01T00:00:00Z" },
+          { id: "asset-2", createdAt: "2026-01-02T00:00:00Z" },
+        ]),
+      );
+
+    const result = await listAnotaCoverCandidates("task-1");
+
+    expect(result.coverAssetId).toBe("asset-2");
+    expect(result.images).toHaveLength(2);
+  });
+
+  it("falls back to earliest when there is no explicit cover", async () => {
+    mockSelect
+      .mockReturnValueOnce(makeChain([{ id: "task-1", coverAssetId: null }]))
+      .mockReturnValueOnce(
+        makeChain([{ id: "asset-1", createdAt: "2026-01-01T00:00:00Z" }]),
+      );
+
+    const result = await listAnotaCoverCandidates("task-1");
+
+    expect(result.coverAssetId).toBe("asset-1");
+  });
+
+  it("throws 404 for a missing task", async () => {
+    mockSelect.mockReturnValueOnce(makeChain([]));
+
+    await expect(
+      listAnotaCoverCandidates("task-missing"),
+    ).rejects.toMatchObject({
       status: 404,
     });
   });
