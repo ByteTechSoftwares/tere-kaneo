@@ -1,0 +1,1 @@
+ALTER TABLE "task" ADD COLUMN "cover_asset_id" text;

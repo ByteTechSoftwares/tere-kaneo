@@ -131,6 +131,7 @@ async function getTasks(projectId: string, options: GetTasksOptions = {}) {
     priority: taskTable.priority,
     startDate: taskTable.startDate,
     dueDate: taskTable.dueDate,
+    coverAssetId: taskTable.coverAssetId,
     position: taskTable.position,
     createdAt: taskTable.createdAt,
     userId: taskTable.userId,
@@ -229,7 +230,10 @@ async function getTasks(projectId: string, options: GetTasksOptions = {}) {
         : null,
     });
   }
-  const taskCoverMap = buildTaskCoverMap(coverAssetsData);
+  const explicitCovers = new Map(
+    paginatedTasks.map((task) => [task.id, task.coverAssetId]),
+  );
+  const taskCoverMap = buildTaskCoverMap(coverAssetsData, explicitCovers);
 
   const projectColumns = await db
     .select()
