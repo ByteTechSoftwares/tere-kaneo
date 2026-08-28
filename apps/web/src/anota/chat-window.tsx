@@ -29,11 +29,20 @@ const SUGGESTION_CHIPS = [
   "Check a vehicle",
 ] as const;
 
+// docs/found-issues.md:L44 — the transcript is persistent and survives
+// reload/re-open (D-38), so a clock-time-only render leaves a message
+// from days ago indistinguishable from one sent a minute ago. Same-day
+// messages keep the bare clock time; anything older gains a date.
 function formatTimestamp(epochMs: number): string {
-  return new Date(epochMs).toLocaleTimeString([], {
+  const date = new Date(epochMs);
+  const time = date.toLocaleTimeString([], {
     hour: "numeric",
     minute: "2-digit",
   });
+  const isToday = date.toDateString() === new Date().toDateString();
+  if (isToday) return time;
+  const day = date.toLocaleDateString([], { month: "short", day: "numeric" });
+  return `${day}, ${time}`;
 }
 
 interface MessageBubbleProps {
@@ -170,11 +179,16 @@ export function ChatWindow({
   const listRef = useRef<HTMLDivElement>(null);
   const userScrolledUpRef = useRef(false);
 
+  // docs/found-issues.md:L92 (D-04) — the near-bottom-only guard below was
+  // already correct; the sole defect was this effect's empty dependency
+  // array, which only fired once on mount. Widened to depend on the
+  // rendered messages so a new arrival re-triggers the same guarded jump.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: messages is intentionally not read in the body — it re-triggers the effect on every new message
   useEffect(() => {
     const list = listRef.current;
     if (!list || userScrolledUpRef.current) return;
     list.scrollTop = list.scrollHeight;
-  }, []);
+  }, [messages]);
 
   const handleScroll = () => {
     const list = listRef.current;
