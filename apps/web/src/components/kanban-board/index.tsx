@@ -31,6 +31,15 @@ type KanbanBoardProps = {
   disableDragDrop?: boolean;
 };
 
+// docs/found-issues.md:L79 -- an explicit thumb rule takes a WebKit
+// scrollbar out of macOS overlay mode so it renders at rest, not only
+// mid-scroll. index.css already ships the width/track/scrollbar-width
+// halves globally; this const is the two board scroll containers' own
+// thumb + Firefox color declaration, kept local so no other scroll
+// surface in the app is restyled.
+const BOARD_SCROLL_CLASSES =
+  "[scrollbar-color:var(--border)_transparent] [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border";
+
 function KanbanBoard({ project, disableDragDrop = false }: KanbanBoardProps) {
   const queryClient = useQueryClient();
   const { setProject } = useProjectStore();
@@ -197,7 +206,10 @@ function KanbanBoard({ project, disableDragDrop = false }: KanbanBoardProps) {
         </header>
 
         <div className="relative min-h-0 flex-1">
-          <div className="flex h-full flex-1 gap-4 overflow-x-auto px-4 pb-4 md:px-5">
+          <div
+            // docs/found-issues.md:L79 -- persistent scrollbar, skeleton container
+            className={`flex h-full flex-1 gap-4 overflow-x-auto px-4 pb-4 md:px-5 ${BOARD_SCROLL_CLASSES}`}
+          >
             {[...Array(4)].map((_, i) => (
               <div
                 key={`kanban-column-skeleton-${
@@ -249,7 +261,10 @@ function KanbanBoard({ project, disableDragDrop = false }: KanbanBoardProps) {
       onDragEnd={handleDragEnd}
     >
       <div className="flex h-full w-full flex-col bg-linear-to-b from-muted/20 to-background">
-        <div className="min-h-0 flex-1 overflow-x-auto [-webkit-overflow-scrolling:touch]">
+        <div
+          // docs/found-issues.md:L79 -- persistent scrollbar, real board container
+          className={`min-h-0 flex-1 overflow-x-auto [-webkit-overflow-scrolling:touch] ${BOARD_SCROLL_CLASSES}`}
+        >
           <div className="flex h-full min-w-max gap-4 px-4 py-4 md:px-5">
             {project.columns?.map((column) => (
               <div
