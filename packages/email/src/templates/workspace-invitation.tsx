@@ -27,16 +27,22 @@ export type WorkspaceInvitationEmailCopy = {
 // Inlined rather than imported from i18n/en-US.json: this package builds with
 // tsc, so the import would survive into dist and resolve outside the published
 // files at runtime.
+//
+// docs/found-issues.md:L55 — kept in sync with i18n/en-US.json's
+// invitations.email block by hand (the workspace-invitation.test.ts "keeps
+// the fallback in sync with the en-US bundle" case is the guard); missed by
+// the 02.1-02 rebrand sweep because it lives outside that plan's
+// apps/web/src, apps/web/index.html, i18n/ grep scope.
 const DEFAULT_COPY: WorkspaceInvitationEmailCopy = {
-  subject: "{{inviterName}} invited you to join {{workspaceName}} on Kaneo",
-  preview: "You're invited to {{workspaceName}} on Kaneo",
+  subject: "{{inviterName}} invited you to join {{workspaceName}} on Anota",
+  preview: "You're invited to {{workspaceName}} on Anota",
   title: "Join {{workspaceName}}",
   subtitle:
-    "{{inviterName}} ({{inviterEmail}}) invited you to collaborate in Kaneo.",
+    "{{inviterName}} ({{inviterEmail}}) invited you to collaborate in Anota.",
   cta: "Accept invitation",
   sameEmail: "You can accept with the same email that received this message.",
   ignore: "If this wasn't expected, you can safely ignore this email.",
-  footer: "Kaneo workspace invitation",
+  footer: "Anota workspace invitation",
 };
 
 function interpolate(template: string, values: Record<string, string>) {
@@ -81,15 +87,15 @@ WorkspaceInvitationEmail.PreviewProps = {
   invitationLink: "https://kaneo.app/invite/abc123",
   to: "invitee@example.com",
   copy: {
-    subject: "{{inviterName}} invited you to join {{workspaceName}} on Kaneo",
-    preview: "You're invited to {{workspaceName}} on Kaneo",
+    subject: "{{inviterName}} invited you to join {{workspaceName}} on Anota",
+    preview: "You're invited to {{workspaceName}} on Anota",
     title: "Join {{workspaceName}}",
     subtitle:
-      "{{inviterName}} ({{inviterEmail}}) invited you to collaborate in Kaneo.",
+      "{{inviterName}} ({{inviterEmail}}) invited you to collaborate in Anota.",
     cta: "Accept invitation",
     sameEmail: "You can accept with the same email that received this message.",
     ignore: "If this wasn't expected, you can safely ignore this email.",
-    footer: "Kaneo workspace invitation",
+    footer: "Anota workspace invitation",
   },
 } as WorkspaceInvitationEmailProps;
 

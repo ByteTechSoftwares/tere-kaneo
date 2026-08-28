@@ -10,18 +10,18 @@
   <meta name="keywords" content="project management, task management, team collaboration, kanban, self-hosted">
 
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://kaneo.app">
+  <meta property="og:url" content="https://anota.tereautocollision.com">
   <meta property="og:title" content="Anota - Internal task tracking for Tere Auto Collision">
   <meta property="og:description"
     content="Anota keeps the shop's tickets assigned and tracked, so nobody has to chase anybody.">
-  <meta property="og:image" content="https://assets.kaneo.app/readme.png">
+  <meta property="og:image" content="https://anota.tereautocollision.com/web-app-manifest-512x512.png">
 
   <meta property="twitter:card" content="summary_large_image">
-  <meta property="twitter:url" content="https://kaneo.app">
+  <meta property="twitter:url" content="https://anota.tereautocollision.com">
   <meta property="twitter:title" content="Anota - Internal task tracking for Tere Auto Collision">
   <meta property="twitter:description"
     content="Anota keeps the shop's tickets assigned and tracked, so nobody has to chase anybody.">
-  <meta property="twitter:image" content="https://assets.kaneo.app/readme.png">
+  <meta property="twitter:image" content="https://anota.tereautocollision.com/web-app-manifest-512x512.png">
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="shortcut icon" href="/favicon.svg" />
@@ -31,25 +31,17 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="application-name" content="Anota">
-  <link rel="canonical" href="https://kaneo.app">
-
-  <script>
-    if (window.location.hostname === 'demo.kaneo.app') {
-      const script = document.createElement('script');
-      script.defer = true;
-      script.setAttribute('data-domain', 'demo.kaneo.app');
-      script.src = 'https://plausible.kaneo.app/js/script.js';
-      document.head.appendChild(script);
-    }
-
-    if (window.location.hostname === 'cloud.kaneo.app') {
-      const script = document.createElement('script');
-      script.defer = true;
-      script.setAttribute('data-domain', 'cloud.kaneo.app');
-      script.src = 'https://plausible.kaneo.app/js/script.js';
-      document.head.appendChild(script);
-    }
-  </script>
+  <!-- docs/found-issues.md:L49 (D-25) — og/twitter/canonical previously
+       pointed at the upstream vendor's own domain and readme image, so a
+       link shared from this deployment previewed as somebody else's
+       product. Repointed at this deployment's live host. The two
+       hostname-conditional Plausible snippets that used to follow this
+       tag (gated on demo.kaneo.app / cloud.kaneo.app) were removed rather
+       than left in place: they can never fire on this deployment's
+       hostname, and dead code loading a third-party analytics script by
+       hostname match is not worth carrying across every future upstream
+       merge just because it happens to be inert today. -->
+  <link rel="canonical" href="https://anota.tereautocollision.com">
 </head>
 
 <body>
