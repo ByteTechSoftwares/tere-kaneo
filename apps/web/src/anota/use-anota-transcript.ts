@@ -35,6 +35,18 @@ export class AnotaTranscriptError extends Error {
 // start via the fork's existing KANEO_-prefixed env.sh loop. Includes the
 // `/panel` path segment (e.g. `https://<worker>.workers.dev/panel`); this
 // hook appends `/transcript`.
+//
+// docs/found-issues.md:L43 — CONTRACT: this value must stop at the
+// `/panel` segment, never deeper. Every client that reads it appends its
+// own sub-path on top: this hook appends `/transcript` (above), and
+// chat-bubble.tsx's send handler appends `/message`. Configuring it one
+// segment too deep (e.g. `.../panel/message`) silently doubles up to
+// `.../panel/message/message` and produces a runtime 404 with no
+// build-time warning. This comment is the documented location for that
+// contract — the entry's original target, `.env.production`, could not
+// be edited under this session's `.env*` permission rule, so the warning
+// lives here instead, where a developer configuring the panel will
+// actually be reading before they set the env var.
 const PANEL_BASE_URL = import.meta.env.VITE_ANOTA_PANEL_URL as
   | string
   | undefined;

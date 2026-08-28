@@ -61,6 +61,14 @@ describe("getInvitationEmailSubject", () => {
       workspaceName,
     );
 
-    expect(subject).toBe("Alice invited you to join Producto on Kaneo");
+    // docs/found-issues.md:L55 — en-US.json's invitations.email.subject was
+    // rebranded to "Anota" (02.1-02); this fallback-locale fixture (es-ES
+    // isn't a supported prefix in get-workspace-invitation-email-copy, so
+    // it resolves to the English copy) was never updated to match. The
+    // fr-FR/de-DE/pt-BR cases above are unaffected: those locales are
+    // deliberately unreachable in this deployment's browser set (see
+    // docs/fork-notes.md's "Locale scope decision") and their own JSON
+    // files were never rebranded, so they still correctly expect "Kaneo".
+    expect(subject).toBe("Alice invited you to join Producto on Anota");
   });
 });
