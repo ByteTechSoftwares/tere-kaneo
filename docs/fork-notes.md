@@ -389,6 +389,37 @@ is active on this repo (every inherited upstream workflow, including `ci.yml`, i
 disabled), so these three local gates are the merge bar -- the PR itself reports no
 checks, which is the expected terminal state on this repo.
 
+### Pre-merge code-review found two real bugs, fixed same session
+
+A mandatory pre-ship `code-review` pass (satisfying this session's `pr-verify-gate`
+review-class requirement) found two correctness bugs in this batch's own diff before
+merge, both fixed with a regression test each:
+
+1. **`kanban-board/index.tsx`'s wheel handler ignored `WheelEvent.deltaMode`.** Firefox on
+   Windows/Linux reports a physical mouse-wheel notch as `deltaY: ~3`,
+   `deltaMode: DOM_DELTA_LINE` (not a pixel value) -- adding that raw to `scrollLeft`
+   panned the board by only ~3px per notch, leaving it still effectively unusable with a
+   mouse on that browser (the exact L79 symptom this change exists to fix). Chrome/Safari
+   report `DOM_DELTA_PIXEL` and were unaffected, which is why local manual testing on this
+   session's own browser didn't surface it. Fixed with a `normalizeWheelDelta` helper that
+   scales `DOM_DELTA_LINE` to an approximate line-height in px and `DOM_DELTA_PAGE` to one
+   board-width pan; new test `board-scroll.test.tsx`'s
+   `"scales a DOM_DELTA_LINE wheel notch..."` case.
+2. **`chat-window.tsx`'s `handleFilePick` cleared an already-valid `pickedFile` when a
+   subsequent, oversized pick was rejected.** The paperclip button stays clickable while a
+   file is staged, so a user could pick a valid photo, tap it again, and pick an oversized
+   file by mistake -- the rejection branch called `setPickedFile(null)`, silently wiping
+   the first, still-valid selection while showing only the "too large" error. Fixed by
+   removing that clear (the rejection path now only sets the error, leaving whatever was
+   already staged alone); new test `chat-window.test.tsx`'s `"keeps an already-valid
+   picked file when a second, oversized pick is rejected"` case.
+
+Both fixes were verified against the pre-fix code (the new tests fail without the fix,
+confirmed by temporarily reverting each change) and pass after. Re-ran the full local
+gate after both fixes: typecheck exit 0, lint exit 0, whole-suite test 176 passed / 8
+failed (184 total, up from 174/182 -- the two new regression tests -- same 8 pre-existing
+L37 failures, zero new failures).
+
 ### CI image build result
 
 Built from fork `main` (post-merge of this plan's PR) via `gh workflow run

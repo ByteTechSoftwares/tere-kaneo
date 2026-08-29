@@ -46,15 +46,18 @@ function makeColumn({
 function makeWheelEvent({
   deltaY,
   deltaX = 0,
+  deltaMode = WheelEvent.DOM_DELTA_PIXEL,
   target,
 }: {
   deltaY: number;
   deltaX?: number;
+  deltaMode?: number;
   target: HTMLElement;
 }): WheelEvent {
   const event = new WheelEvent("wheel", {
     deltaY,
     deltaX,
+    deltaMode,
     cancelable: true,
   });
   Object.defineProperty(event, "target", { value: target });
@@ -137,5 +140,26 @@ describe("createBoardWheelHandler", () => {
 
     expect(board.scrollLeft).toBe(0);
     expect(preventDefault).not.toHaveBeenCalled();
+  });
+
+  it("scales a DOM_DELTA_LINE wheel notch (Firefox physical mouse) to a real pixel pan, not a ~3px crawl", () => {
+    const board = makeBoard({ scrollWidth: 2000, clientWidth: 800 });
+    const handler = createBoardWheelHandler(board);
+    const preventDefault = vi.fn();
+    // Firefox reports a physical mouse-wheel notch as deltaY: 3,
+    // deltaMode: DOM_DELTA_LINE (1) -- not a pixel value.
+    const event = makeWheelEvent({
+      deltaY: 3,
+      deltaMode: WheelEvent.DOM_DELTA_LINE,
+      target: board,
+    });
+    Object.defineProperty(event, "preventDefault", { value: preventDefault });
+
+    handler(event);
+
+    // Raw deltaY (3) would be an imperceptible pan -- this asserts the
+    // handler scales line-mode deltas to a usable pixel amount instead.
+    expect(board.scrollLeft).toBeGreaterThan(3);
+    expect(preventDefault).toHaveBeenCalled();
   });
 });

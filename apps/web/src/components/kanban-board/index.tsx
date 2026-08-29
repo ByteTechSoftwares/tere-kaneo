@@ -52,6 +52,28 @@ function columnHasVerticalRoom(column: HTMLElement, deltaY: number): boolean {
   return false;
 }
 
+// docs/found-issues.md:L79 -- a physical mouse wheel on Firefox (Windows/
+// Linux) reports deltaMode = DOM_DELTA_LINE with deltaY typically +-3, not a
+// pixel value; adding that raw to scrollLeft pans only ~3px per notch,
+// leaving the board still effectively unusable with a mouse on that
+// browser. Chrome/Safari report DOM_DELTA_PIXEL and are unaffected. This
+// scales LINE mode to an approximate line-height in px, and PAGE mode
+// (rare; e.g. some scroll-wheel drivers) to one board-width pan.
+const WHEEL_LINE_HEIGHT_PX = 16;
+
+function normalizeWheelDelta(
+  event: WheelEvent,
+  container: HTMLDivElement,
+): number {
+  if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+    return event.deltaY * WHEEL_LINE_HEIGHT_PX;
+  }
+  if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+    return event.deltaY * container.clientWidth;
+  }
+  return event.deltaY;
+}
+
 // docs/found-issues.md:L79 -- wheel-to-horizontal pan for the real board
 // container. Exported so board-scroll.test.tsx can exercise the handler
 // directly against hand-built DOM nodes, without rendering the whole
@@ -74,7 +96,7 @@ export function createBoardWheelHandler(
     if (container.scrollWidth <= container.clientWidth) return;
 
     event.preventDefault();
-    container.scrollLeft += event.deltaY;
+    container.scrollLeft += normalizeWheelDelta(event, container);
   };
 }
 

@@ -189,6 +189,35 @@ describe("ChatWindow composer photo attach", () => {
     expect(onSend).not.toHaveBeenCalled();
   });
 
+  it("keeps an already-valid picked file when a second, oversized pick is rejected (code-review regression)", () => {
+    const onSend = vi.fn();
+    const { container, getByText } = render(
+      <ChatWindow {...baseProps} onSend={onSend} messages={[]} />,
+    );
+    const valid = makeFile("photo.png", 1024);
+    pickFile(container, valid);
+    const sendButton = container.querySelector(
+      'button[aria-label="Send message"]',
+    ) as HTMLButtonElement;
+    expect(sendButton.disabled).toBe(false);
+
+    const oversized = makeFile("huge.png", 11 * 1024 * 1024);
+    pickFile(container, oversized);
+
+    expect(getByText(/too large/i)).toBeTruthy();
+    // The first, still-valid file must remain attached -- the send button
+    // stays enabled and the chip is still present, rather than the
+    // rejected second pick silently wiping the earlier valid selection.
+    expect(sendButton.disabled).toBe(false);
+    expect(
+      container.querySelector('button[aria-label="Remove attached photo"]'),
+    ).toBeTruthy();
+
+    fireEvent.click(sendButton);
+
+    expect(onSend).toHaveBeenCalledWith("", valid);
+  });
+
   it("clears the selection when the chip's remove control is clicked", () => {
     const { container } = render(<ChatWindow {...baseProps} messages={[]} />);
     pickFile(container, makeFile("photo.png", 1024));

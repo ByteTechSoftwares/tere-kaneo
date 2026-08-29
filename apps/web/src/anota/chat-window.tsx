@@ -268,7 +268,13 @@ export function ChatWindow({
     event.target.value = "";
     if (!file) return;
     if (file.size > MAX_PANEL_IMAGE_BYTES) {
-      setPickedFile(null);
+      // docs/found-issues.md:L74 code-review fix -- do NOT clear an
+      // already-valid pickedFile here. The paperclip button stays
+      // clickable while a file is staged, so a user can pick a valid
+      // photo, then tap it again and pick an oversized one by mistake;
+      // clearing pickedFile on that second, rejected pick silently
+      // discarded the first, still-valid attachment. Only surface the
+      // error and leave whatever was already staged (if anything) alone.
       setFileError("That photo is too large — please pick one under 10MB.");
       return;
     }
