@@ -8,9 +8,17 @@
 //
 // No streaming (RESEARCH-confirmed): sends are optimistic-append +
 // indefinite "Anota is thinking…" indicator + one awaited JSON reply.
-import { Send, X } from "lucide-react";
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { Paperclip, Send, X } from "lucide-react";
+import {
+  type ChangeEvent,
+  type KeyboardEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/cn";
+import { getInitials } from "@/lib/get-initials";
 
 export type ChatMessageRole = "user" | "anota";
 
@@ -28,6 +36,12 @@ const SUGGESTION_CHIPS = [
   "Create a task",
   "Check a vehicle",
 ] as const;
+
+// Client-side ceiling, matching the Worker's own MAX_MEDIA_BYTES
+// (worker/src/media/panel-media.ts) so the user gets instant feedback
+// instead of waiting on a round trip that is guaranteed to fail with
+// image_rejected/too-large.
+const MAX_PANEL_IMAGE_BYTES = 10 * 1024 * 1024;
 
 // docs/found-issues.md:L44 — the transcript is persistent and survives
 // reload/re-open (D-38), so a clock-time-only render leaves a message
@@ -47,27 +61,58 @@ function formatTimestamp(epochMs: number): string {
 
 interface MessageBubbleProps {
   readonly message: ChatMessage;
+  readonly userAvatarUrl?: string;
+  readonly userName?: string;
 }
 
-function MessageBubble({ message }: MessageBubbleProps) {
+function MessageBubble({
+  message,
+  userAvatarUrl,
+  userName,
+}: MessageBubbleProps) {
   const isOwn = message.role === "user";
   return (
     <div
-      className={cn("flex flex-col gap-1", isOwn ? "items-end" : "items-start")}
+      className={cn(
+        "flex items-end gap-2",
+        isOwn ? "flex-row-reverse" : "flex-row",
+      )}
     >
+      {isOwn ? (
+        <Avatar className="size-6 shrink-0">
+          <AvatarImage src={userAvatarUrl} alt={userName ?? ""} />
+          <AvatarFallback className="text-[10px]">
+            {getInitials(userName, "??")}
+          </AvatarFallback>
+        </Avatar>
+      ) : (
+        <img
+          src="/anota-mascot.svg"
+          alt=""
+          aria-hidden="true"
+          className="size-6 shrink-0 rounded-full bg-[#141414] p-1"
+        />
+      )}
       <div
         className={cn(
-          "max-w-[85%] whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-foreground text-sm leading-normal",
-          isOwn
-            ? "bg-[color-mix(in_srgb,var(--primary)_12%,var(--card))]"
-            : "border border-border bg-card",
+          "flex flex-col gap-1",
+          isOwn ? "items-end" : "items-start",
         )}
       >
-        {message.text}
+        <div
+          className={cn(
+            "max-w-[85%] whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-foreground text-sm leading-normal",
+            isOwn
+              ? "bg-[color-mix(in_srgb,var(--primary)_12%,var(--card))]"
+              : "border border-border bg-card",
+          )}
+        >
+          {message.text}
+        </div>
+        <span className="px-1 text-[12px] text-muted-foreground leading-tight">
+          {isOwn ? "You" : "Anota"} · {formatTimestamp(message.createdAt)}
+        </span>
       </div>
-      <span className="px-1 text-[12px] text-muted-foreground leading-tight">
-        {isOwn ? "You" : "Anota"} · {formatTimestamp(message.createdAt)}
-      </span>
     </div>
   );
 }
@@ -161,7 +206,9 @@ export interface ChatWindowProps {
   readonly isSending: boolean;
   readonly sendError: SendErrorKind | null;
   readonly isOffline: boolean;
-  readonly onSend: (text: string) => void;
+  readonly userAvatarUrl?: string;
+  readonly userName?: string;
+  readonly onSend: (text: string, file?: File) => void;
   readonly onClose: () => void;
 }
 
@@ -172,11 +219,16 @@ export function ChatWindow({
   isSending,
   sendError,
   isOffline,
+  userAvatarUrl,
+  userName,
   onSend,
   onClose,
 }: ChatWindowProps) {
   const [draft, setDraft] = useState("");
+  const [pickedFile, setPickedFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const userScrolledUpRef = useRef(false);
 
   // docs/found-issues.md:L92 (D-04) — the near-bottom-only guard below was
@@ -200,10 +252,39 @@ export function ChatWindow({
 
   const submitDraft = (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed || isSending || isOffline || isOffAllowlist) return;
-    onSend(trimmed);
+    if ((!trimmed && !pickedFile) || isSending || isOffline || isOffAllowlist)
+      return;
+    onSend(trimmed, pickedFile ?? undefined);
     setDraft("");
+    setPickedFile(null);
+    setFileError(null);
     userScrolledUpRef.current = false;
+  };
+
+  const handleFilePick = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Reset the input's value on every pick so re-picking the same file
+    // after a rejection still fires a change event.
+    event.target.value = "";
+    if (!file) return;
+    if (file.size > MAX_PANEL_IMAGE_BYTES) {
+      // docs/found-issues.md:L74 code-review fix -- do NOT clear an
+      // already-valid pickedFile here. The paperclip button stays
+      // clickable while a file is staged, so a user can pick a valid
+      // photo, then tap it again and pick an oversized one by mistake;
+      // clearing pickedFile on that second, rejected pick silently
+      // discarded the first, still-valid attachment. Only surface the
+      // error and leave whatever was already staged (if anything) alone.
+      setFileError("That photo is too large — please pick one under 10MB.");
+      return;
+    }
+    setFileError(null);
+    setPickedFile(file);
+  };
+
+  const clearPickedFile = () => {
+    setPickedFile(null);
+    setFileError(null);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -247,7 +328,12 @@ export function ChatWindow({
             <StateBanner heading="Loading your conversation…" />
           ) : null}
           {messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+            <MessageBubble
+              key={message.id}
+              message={message}
+              userAvatarUrl={userAvatarUrl}
+              userName={userName}
+            />
           ))}
           {isSending ? <TypingIndicator /> : null}
           {sendError === "network" ? (
@@ -267,29 +353,65 @@ export function ChatWindow({
       ) : null}
 
       {!isOffAllowlist ? (
-        <div className="flex items-end gap-2 border-border border-t px-4 py-3">
-          <label htmlFor="anota-composer" className="sr-only">
-            Message Anota
-          </label>
-          <textarea
-            id="anota-composer"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={composerDisabled}
-            rows={1}
-            placeholder="Message Anota…"
-            className="max-h-32 min-h-9 flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-[14px] text-foreground leading-normal outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-64"
-          />
-          <button
-            type="button"
-            aria-label="Send message"
-            disabled={composerDisabled || draft.trim().length === 0}
-            onClick={() => submitDraft(draft)}
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-64"
-          >
-            <Send className="size-4" aria-hidden="true" />
-          </button>
+        <div className="flex flex-col gap-2 border-border border-t px-4 py-3">
+          {pickedFile ? (
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-1 text-[12px] text-foreground">
+              <span className="truncate">{pickedFile.name}</span>
+              <button
+                type="button"
+                onClick={clearPickedFile}
+                aria-label="Remove attached photo"
+                className="ml-auto flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X className="size-3" aria-hidden="true" />
+              </button>
+            </div>
+          ) : null}
+          {fileError ? (
+            <p className="px-1 text-[12px] text-destructive">{fileError}</p>
+          ) : null}
+          <div className="flex items-end gap-2">
+            <label htmlFor="anota-composer" className="sr-only">
+              Message Anota
+            </label>
+            <textarea
+              id="anota-composer"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={composerDisabled}
+              rows={1}
+              placeholder="Message Anota…"
+              className="max-h-32 min-h-9 flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2 text-[14px] text-foreground leading-normal outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-64"
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFilePick}
+              className="hidden"
+            />
+            <button
+              type="button"
+              aria-label="Attach a photo"
+              disabled={composerDisabled}
+              onClick={() => fileInputRef.current?.click()}
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-64"
+            >
+              <Paperclip className="size-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label="Send message"
+              disabled={
+                composerDisabled || (draft.trim().length === 0 && !pickedFile)
+              }
+              onClick={() => submitDraft(draft)}
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-64"
+            >
+              <Send className="size-4" aria-hidden="true" />
+            </button>
+          </div>
         </div>
       ) : null}
     </div>

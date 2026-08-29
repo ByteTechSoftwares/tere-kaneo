@@ -22,7 +22,11 @@ function Column({ column, disableDragDrop = false }: ColumnProps) {
       <div className="shrink-0 border-b border-border/60 px-3 py-2">
         <ColumnHeader column={column} />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-1 [-webkit-overflow-scrolling:touch]">
+      {/* docs/found-issues.md:L79 -- marker the board's wheel handler uses to find this column's own vertical scroll region */}
+      <div
+        data-column-scroll=""
+        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-1 [-webkit-overflow-scrolling:touch]"
+      >
         <ColumnDropzone
           column={column}
           disableDragDrop={disableDragDrop}

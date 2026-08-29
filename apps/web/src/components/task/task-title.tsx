@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
@@ -74,22 +74,66 @@ export default function TaskTitle({ taskId }: TaskTitleProps) {
     [debouncedUpdate],
   );
 
+  // docs/found-issues.md:L80 -- auto-growing textarea so a realistic RO
+  // title wraps instead of clipping at phone width. This effect handles
+  // "on mount" and any data-driven value change (task switch); the
+  // per-keystroke case is handled inline in onChange below, since the
+  // Controller render prop isolates keystroke re-renders from this
+  // component (task?.title only changes on real server data).
+  const titleTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useLayoutEffect(() => {
+    const el = titleTextareaRef.current;
+    // task?.title is read here (not just listed as a dep) so this effect
+    // is a no-op until the task has actually loaded -- and so it reruns
+    // on every real data-driven value change, e.g. switching tasks.
+    if (!el || task?.title === undefined) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [task?.title]);
+
+  // docs/found-issues.md:L80 -- a title is single-line semantically even
+  // though the box now wraps; Enter confirms/blurs instead of inserting a
+  // newline.
+  const handleTitleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (
+        event.key === "Enter" &&
+        !event.shiftKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.metaKey
+      ) {
+        event.preventDefault();
+        event.currentTarget.blur();
+      }
+    },
+    [],
+  );
+
   return (
     <Form {...form}>
       <FormField
         control={form.control}
         name="title"
         render={({ field }) => (
-          <input
+          <textarea
             {...field}
-            type="text"
+            ref={(el) => {
+              field.ref(el);
+              titleTextareaRef.current = el;
+            }}
+            rows={1}
             placeholder={t("tasks:detail.titlePlaceholder")}
             readOnly={!canEdit}
-            className="block h-auto w-full appearance-none border-0 bg-transparent p-0 font-heading text-[2rem] leading-[1.15] font-semibold tracking-[-0.02em] text-foreground outline-none placeholder:text-foreground/45"
+            className="block h-auto w-full resize-none overflow-hidden appearance-none border-0 bg-transparent p-0 font-heading text-xl md:text-[2rem] leading-[1.15] font-semibold tracking-[-0.02em] text-foreground outline-none placeholder:text-foreground/45"
             onChange={(e) => {
               field.onChange(e);
               handleTitleChange(e.target.value);
+              e.target.style.height = "auto";
+              e.target.style.height = `${e.target.scrollHeight}px`;
             }}
+            onKeyDown={handleTitleKeyDown}
           />
         )}
       />

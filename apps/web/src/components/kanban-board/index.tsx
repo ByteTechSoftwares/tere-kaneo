@@ -16,7 +16,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { produce } from "immer";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUpdateTask } from "@/hooks/mutations/task/use-update-task";
 import { useRegisterShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import useBulkSelectionStore from "@/store/bulk-selection";
@@ -30,6 +30,75 @@ type KanbanBoardProps = {
   project: ProjectWithTasks;
   disableDragDrop?: boolean;
 };
+
+// docs/found-issues.md:L79 -- an explicit thumb rule takes a WebKit
+// scrollbar out of macOS overlay mode so it renders at rest, not only
+// mid-scroll. index.css already ships the width/track/scrollbar-width
+// halves globally; this const is the two board scroll containers' own
+// thumb + Firefox color declaration, kept local so no other scroll
+// surface in the app is restyled.
+const BOARD_SCROLL_CLASSES =
+  "[scrollbar-color:var(--border)_transparent] [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border";
+
+// docs/found-issues.md:L79 -- a column still has vertical room in the
+// wheel's direction, so the board must not steal the event from it.
+function columnHasVerticalRoom(column: HTMLElement, deltaY: number): boolean {
+  if (deltaY > 0) {
+    return column.scrollTop + column.clientHeight < column.scrollHeight - 1;
+  }
+  if (deltaY < 0) {
+    return column.scrollTop > 0;
+  }
+  return false;
+}
+
+// docs/found-issues.md:L79 -- a physical mouse wheel on Firefox (Windows/
+// Linux) reports deltaMode = DOM_DELTA_LINE with deltaY typically +-3, not a
+// pixel value; adding that raw to scrollLeft pans only ~3px per notch,
+// leaving the board still effectively unusable with a mouse on that
+// browser. Chrome/Safari report DOM_DELTA_PIXEL and are unaffected. This
+// scales LINE mode to an approximate line-height in px, and PAGE mode
+// (rare; e.g. some scroll-wheel drivers) to one board-width pan.
+const WHEEL_LINE_HEIGHT_PX = 16;
+
+function normalizeWheelDelta(
+  event: WheelEvent,
+  container: HTMLDivElement,
+): number {
+  if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+    return event.deltaY * WHEEL_LINE_HEIGHT_PX;
+  }
+  if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+    return event.deltaY * container.clientWidth;
+  }
+  return event.deltaY;
+}
+
+// docs/found-issues.md:L79 -- wheel-to-horizontal pan for the real board
+// container. Exported so board-scroll.test.tsx can exercise the handler
+// directly against hand-built DOM nodes, without rendering the whole
+// KanbanBoard (which needs DndContext, a project store and query data).
+// Must be attached with `addEventListener(..., { passive: false })`, never
+// the JSX `onWheel` prop -- React registers that passively, so
+// `preventDefault()` inside it is silently ignored.
+export function createBoardWheelHandler(
+  container: HTMLDivElement,
+): (event: WheelEvent) => void {
+  return (event: WheelEvent) => {
+    // A trackpad already producing a real horizontal gesture must never be
+    // doubled by this handler.
+    if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+
+    const target = event.target as HTMLElement | null;
+    const column = target?.closest<HTMLElement>("[data-column-scroll]");
+    if (column && columnHasVerticalRoom(column, event.deltaY)) return;
+
+    if (container.scrollWidth <= container.clientWidth) return;
+
+    event.preventDefault();
+    container.scrollLeft += normalizeWheelDelta(event, container);
+  };
+}
 
 function KanbanBoard({ project, disableDragDrop = false }: KanbanBoardProps) {
   const queryClient = useQueryClient();
@@ -57,6 +126,21 @@ function KanbanBoard({ project, disableDragDrop = false }: KanbanBoardProps) {
   useEffect(() => {
     clearFocus();
   }, [clearFocus]);
+
+  const boardRef = useRef<HTMLDivElement>(null);
+
+  // docs/found-issues.md:L79 -- attached imperatively (never JSX onWheel,
+  // see createBoardWheelHandler's comment). `project?.columns` is the same
+  // gate the loading-skeleton branch below uses; it re-runs this effect the
+  // moment boardRef's div actually mounts (the loading render has no board
+  // container to attach to).
+  useEffect(() => {
+    const el = boardRef.current;
+    if (!el || !project?.columns) return;
+    const handleWheel = createBoardWheelHandler(el);
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, [project?.columns]);
 
   useRegisterShortcuts({
     shortcuts: {
@@ -197,7 +281,10 @@ function KanbanBoard({ project, disableDragDrop = false }: KanbanBoardProps) {
         </header>
 
         <div className="relative min-h-0 flex-1">
-          <div className="flex h-full flex-1 gap-4 overflow-x-auto px-4 pb-4 md:px-5">
+          <div
+            // docs/found-issues.md:L79 -- persistent scrollbar, skeleton container
+            className={`flex h-full flex-1 gap-4 overflow-x-auto px-4 pb-4 md:px-5 ${BOARD_SCROLL_CLASSES}`}
+          >
             {[...Array(4)].map((_, i) => (
               <div
                 key={`kanban-column-skeleton-${
@@ -249,7 +336,11 @@ function KanbanBoard({ project, disableDragDrop = false }: KanbanBoardProps) {
       onDragEnd={handleDragEnd}
     >
       <div className="flex h-full w-full flex-col bg-linear-to-b from-muted/20 to-background">
-        <div className="min-h-0 flex-1 overflow-x-auto [-webkit-overflow-scrolling:touch]">
+        <div
+          ref={boardRef}
+          // docs/found-issues.md:L79 -- persistent scrollbar, real board container
+          className={`min-h-0 flex-1 overflow-x-auto [-webkit-overflow-scrolling:touch] ${BOARD_SCROLL_CLASSES}`}
+        >
           <div className="flex h-full min-w-max gap-4 px-4 py-4 md:px-5">
             {project.columns?.map((column) => (
               <div
