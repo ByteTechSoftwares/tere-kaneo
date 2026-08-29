@@ -10,7 +10,9 @@
 // indefinite "Anota is thinking…" indicator + one awaited JSON reply.
 import { Send, X } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/cn";
+import { getInitials } from "@/lib/get-initials";
 
 export type ChatMessageRole = "user" | "anota";
 
@@ -47,27 +49,58 @@ function formatTimestamp(epochMs: number): string {
 
 interface MessageBubbleProps {
   readonly message: ChatMessage;
+  readonly userAvatarUrl?: string;
+  readonly userName?: string;
 }
 
-function MessageBubble({ message }: MessageBubbleProps) {
+function MessageBubble({
+  message,
+  userAvatarUrl,
+  userName,
+}: MessageBubbleProps) {
   const isOwn = message.role === "user";
   return (
     <div
-      className={cn("flex flex-col gap-1", isOwn ? "items-end" : "items-start")}
+      className={cn(
+        "flex items-end gap-2",
+        isOwn ? "flex-row-reverse" : "flex-row",
+      )}
     >
+      {isOwn ? (
+        <Avatar className="size-6 shrink-0">
+          <AvatarImage src={userAvatarUrl} alt={userName ?? ""} />
+          <AvatarFallback className="text-[10px]">
+            {getInitials(userName, "??")}
+          </AvatarFallback>
+        </Avatar>
+      ) : (
+        <img
+          src="/anota-mascot.svg"
+          alt=""
+          aria-hidden="true"
+          className="size-6 shrink-0 rounded-full bg-[#141414] p-1"
+        />
+      )}
       <div
         className={cn(
-          "max-w-[85%] whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-foreground text-sm leading-normal",
-          isOwn
-            ? "bg-[color-mix(in_srgb,var(--primary)_12%,var(--card))]"
-            : "border border-border bg-card",
+          "flex flex-col gap-1",
+          isOwn ? "items-end" : "items-start",
         )}
       >
-        {message.text}
+        <div
+          className={cn(
+            "max-w-[85%] whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-foreground text-sm leading-normal",
+            isOwn
+              ? "bg-[color-mix(in_srgb,var(--primary)_12%,var(--card))]"
+              : "border border-border bg-card",
+          )}
+        >
+          {message.text}
+        </div>
+        <span className="px-1 text-[12px] text-muted-foreground leading-tight">
+          {isOwn ? "You" : "Anota"} · {formatTimestamp(message.createdAt)}
+        </span>
       </div>
-      <span className="px-1 text-[12px] text-muted-foreground leading-tight">
-        {isOwn ? "You" : "Anota"} · {formatTimestamp(message.createdAt)}
-      </span>
     </div>
   );
 }
@@ -161,6 +194,8 @@ export interface ChatWindowProps {
   readonly isSending: boolean;
   readonly sendError: SendErrorKind | null;
   readonly isOffline: boolean;
+  readonly userAvatarUrl?: string;
+  readonly userName?: string;
   readonly onSend: (text: string) => void;
   readonly onClose: () => void;
 }
@@ -172,6 +207,8 @@ export function ChatWindow({
   isSending,
   sendError,
   isOffline,
+  userAvatarUrl,
+  userName,
   onSend,
   onClose,
 }: ChatWindowProps) {
@@ -247,7 +284,12 @@ export function ChatWindow({
             <StateBanner heading="Loading your conversation…" />
           ) : null}
           {messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+            <MessageBubble
+              key={message.id}
+              message={message}
+              userAvatarUrl={userAvatarUrl}
+              userName={userName}
+            />
           ))}
           {isSending ? <TypingIndicator /> : null}
           {sendError === "network" ? (

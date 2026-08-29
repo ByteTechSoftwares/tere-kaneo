@@ -183,6 +183,8 @@ export function AnotaChatBubble() {
               isSending={isSending}
               sendError={sendError}
               isOffline={!isOnline}
+              userAvatarUrl={user.image ?? undefined}
+              userName={user.name ?? undefined}
               onSend={handleSend}
               onClose={handleClose}
             />

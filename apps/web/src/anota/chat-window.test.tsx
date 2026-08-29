@@ -81,3 +81,49 @@ describe("ChatWindow scroll behaviour (D-04)", () => {
     expect(list.scrollTop).toBe(42);
   });
 });
+
+function makeAnotaMessage(id: string, createdAt: number): ChatMessage {
+  return { id, role: "anota", text: id, createdAt };
+}
+
+// jsdom never loads images, so the fork's Base UI AvatarImage (which only
+// mounts after the browser successfully loads its src) never mounts in
+// these tests -- AvatarFallback is what renders instead. Assert on the
+// fallback initials, not on an img element carrying the avatar URL; do not
+// "fix" this by asserting an <img> for the user avatar case.
+describe("ChatWindow message avatars (L26)", () => {
+  it("renders the mascot img for an Anota-role message", () => {
+    const { container } = render(
+      <ChatWindow {...baseProps} messages={[makeAnotaMessage("m1", 1)]} />,
+    );
+    const mascotImgs = container.querySelectorAll(
+      'img[src="/anota-mascot.svg"]',
+    );
+    expect(mascotImgs.length).toBeGreaterThan(0);
+  });
+
+  it("renders the user's initials for a user-role message with a name", () => {
+    const { container } = render(
+      <ChatWindow
+        {...baseProps}
+        messages={[makeMessage("m1", 1)]}
+        userName="Mario Rossi"
+      />,
+    );
+    expect(container.textContent).toContain("MR");
+  });
+
+  it("renders no mascot img for a user-role message", () => {
+    const { container } = render(
+      <ChatWindow
+        {...baseProps}
+        messages={[makeMessage("m1", 1)]}
+        userName="Mario Rossi"
+      />,
+    );
+    const mascotImgs = container.querySelectorAll(
+      'img[src="/anota-mascot.svg"]',
+    );
+    expect(mascotImgs.length).toBe(0);
+  });
+});
