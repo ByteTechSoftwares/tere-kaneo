@@ -349,3 +349,54 @@ Full run id, GHCR verification, and rollback tag: `deploy/render.md`'s Phase 03 
 row (shop-ops repo). The live Render service was **not** touched by this plan -- no
 Render API call was made -- production stays on `1.0.1` until plan 03-05's gated
 cutover.
+
+## Phase 06 -- Shop-device UX batch (L79, L80, L26, L74)
+
+Branch: `gsd/06-shop-device-ux-batch`. Four found-issues entries batched into one PR and
+one image release, per the phase's own success criterion: board unusable with a mouse
+(L79), task title clips on phone (L80), panel messages have no sender avatar (L26), and
+the panel composer cannot attach a photo (L74).
+
+### Upstream files edited directly, and why no override seam existed
+
+| File | What changed | Why a direct edit (no seam) |
+|---|---|---|
+| `apps/web/src/components/kanban-board/index.tsx` | Added a module-local `BOARD_SCROLL_CLASSES` const (persistent WebKit/Firefox scrollbar styling) applied to both board `overflow-x` containers, plus an exported `createBoardWheelHandler` factory wired via an imperative `wheel` listener (`useRef`/`useEffect`, never JSX `onWheel` -- React registers that passively) | No seam: `KanbanBoard` is the single board renderer with no render-slot prop or plugin point for scroll behavior; the new logic is two small additions (a class-string const, an exported pure handler factory) rather than a rewrite of the component |
+| `apps/web/src/components/kanban-board/column/index.tsx` | One `data-column-scroll` attribute added to the column's existing vertical-scroll `div` (no other change) | No seam: the board's wheel handler needs a DOM marker to find each column's own scroll region via `closest()`; a data attribute on the existing element is the minimal way to expose that without a new prop threaded through `Column` |
+| `apps/web/src/components/task/task-title.tsx` | Swapped the fixed-size single-line `<input type="text">` for an auto-growing `<textarea>` at a responsive size, with a `useLayoutEffect` (mount/task-switch resize) plus an inline `onChange` resize (per-keystroke); the existing debounced save path is untouched | No seam: `TaskTitle` is the only title control on the task detail view, and the control-swap is intrinsic to the fix -- there is no wrapper/decorator point that could change the rendered form element from outside this file |
+
+Fork-owned (not upstream edits, all inside the existing `apps/web/src/anota/`
+Anota-namespaced directory or new test files): `apps/web/src/anota/chat-window.tsx`
+(sender avatars + composer photo affordance), `apps/web/src/anota/chat-bubble.tsx`
+(base64 image encode into the existing panel POST), `apps/web/src/anota/read-image-file.ts`
+(new, `File` -> base64 helper) and its test, plus new test files
+`apps/web/src/components/kanban-board/board-scroll.test.tsx` and
+`apps/web/src/components/task/task-title.test.tsx`. The Worker-side panel `image` field
+contract (`worker/src/media/panel-media.ts` and siblings) lives in the shop-ops repo, not
+this fork -- see that repo's `06-02-SUMMARY.md`.
+
+### Local gate output (pre-merge, this plan)
+
+`pnpm --filter @kaneo/web typecheck` -- exit 0. `pnpm --filter @kaneo/web exec biome
+check .` -- "Checked 607 files... No fixes applied", exit 0. `pnpm --filter @kaneo/web
+test` (whole suite) -- 174 passed / 8 failed (182 total); all 8 failures are in
+`src/hooks/use-board-sort.test.tsx` and `src/hooks/use-task-filters-with-labels-support.test.tsx`,
+a pre-existing Node/jsdom `localStorage` teardown defect tracked as shop-ops
+`docs/found-issues.md` **L37** (`[open]` since 2026-08-23, zero overlap with any file this
+phase touched, reproduced failing in isolation independent of this branch). Every
+anota/kanban/task-title suite this phase added or touched passes. Only `build-image.yml`
+is active on this repo (every inherited upstream workflow, including `ci.yml`, is
+disabled), so these three local gates are the merge bar -- the PR itself reports no
+checks, which is the expected terminal state on this repo.
+
+### CI image build result
+
+Built from fork `main` (post-merge of this plan's PR) via `gh workflow run
+build-image.yml -f version=1.3.0`. `1.3.0` is a minor bump over the live `1.2.1` because
+this batch adds features (panel avatars, panel photo attach), not just fixes; ByteTech's
+image line is versioned independently of upstream's numbers and is never `:latest`
+(D-25).
+
+Full run id, GHCR verification (both the index digest and the `linux/amd64` platform-leg
+digest), and rollback tag: `deploy/render.md`'s 2026-08-28/29 version-bump log entries
+(shop-ops repo).
