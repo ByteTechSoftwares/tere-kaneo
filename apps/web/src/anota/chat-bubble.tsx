@@ -21,6 +21,7 @@ import {
   ChatWindow,
   type SendErrorKind,
 } from "./chat-window";
+import { readImageFile } from "./read-image-file";
 import { useAnotaSession } from "./use-anota-session";
 import { useAnotaTranscript } from "./use-anota-transcript";
 
@@ -108,15 +109,23 @@ export function AnotaChatBubble() {
     setIsExpanded(false);
   };
 
-  const handleSend = async (text: string) => {
+  const handleSend = async (text: string, file?: File) => {
     if (!PANEL_BASE_URL) {
       setSendError("network");
       return;
     }
     const messageSid = crypto.randomUUID();
+    // Display-only local echo: when a file is attached, name it on the
+    // user's own message bubble so the sender can see what they just
+    // sent. This echo text is NEVER substituted into the wire `text` —
+    // the Worker's agent core keys its bare-photo behaviour off a
+    // genuinely empty text (06-02-SUMMARY.md).
+    const echoText = file
+      ? `${text}${text ? " " : ""}[Photo: ${file.name}]`
+      : text;
     setSessionMessages((prev) => [
       ...prev,
-      { id: messageSid, role: "user", text, createdAt: Date.now() },
+      { id: messageSid, role: "user", text: echoText, createdAt: Date.now() },
     ]);
     setIsSending(true);
     setSendError(null);
@@ -127,19 +136,24 @@ export function AnotaChatBubble() {
         setSendError("network");
         return;
       }
+      const image = file ? await readImageFile(file) : undefined;
       const response = await fetch(`${PANEL_BASE_URL}/message`, {
         method: "POST",
         headers: {
           "content-type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ text, messageSid }),
+        body: JSON.stringify({ text, messageSid, image }),
       });
       if (response.status === 403) {
         setIsOffAllowlist(true);
         return;
       }
       if (!response.ok) {
+        // Covers both a structurally-invalid/staging-rejected image (400
+        // image_invalid / image_rejected) and any other non-ok status —
+        // the existing send-error state, never swallowed as something
+        // else.
         setSendError("network");
         return;
       }
