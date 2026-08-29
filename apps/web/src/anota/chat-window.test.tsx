@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { type ChatMessage, ChatWindow } from "./chat-window";
 
 afterEach(() => {
@@ -125,5 +125,86 @@ describe("ChatWindow message avatars (L26)", () => {
       'img[src="/anota-mascot.svg"]',
     );
     expect(mascotImgs.length).toBe(0);
+  });
+});
+
+function makeFile(name: string, size: number, type = "image/png"): File {
+  const file = new File([new Uint8Array(1)], name, { type });
+  // Faking `.size` avoids allocating real megabytes for the oversize case.
+  Object.defineProperty(file, "size", { value: size, configurable: true });
+  return file;
+}
+
+function pickFile(container: HTMLElement, file: File) {
+  const input = container.querySelector(
+    'input[type="file"]',
+  ) as HTMLInputElement;
+  fireEvent.change(input, { target: { files: [file] } });
+}
+
+describe("ChatWindow composer photo attach", () => {
+  it("enables the send button with an empty draft once a file is picked", () => {
+    const { container } = render(<ChatWindow {...baseProps} messages={[]} />);
+    const sendButton = container.querySelector(
+      'button[aria-label="Send message"]',
+    ) as HTMLButtonElement;
+    expect(sendButton.disabled).toBe(true);
+
+    pickFile(container, makeFile("photo.png", 1024));
+
+    expect(sendButton.disabled).toBe(false);
+  });
+
+  it("passes both the text and the picked File to onSend", () => {
+    const onSend = vi.fn();
+    const { container } = render(
+      <ChatWindow {...baseProps} onSend={onSend} messages={[]} />,
+    );
+    const file = makeFile("photo.png", 1024);
+    pickFile(container, file);
+    const sendButton = container.querySelector(
+      'button[aria-label="Send message"]',
+    ) as HTMLButtonElement;
+
+    fireEvent.click(sendButton);
+
+    expect(onSend).toHaveBeenCalledWith("", file);
+  });
+
+  it("refuses an oversized file, shows a readable error, and never calls onSend", () => {
+    const onSend = vi.fn();
+    const { container, getByText } = render(
+      <ChatWindow {...baseProps} onSend={onSend} messages={[]} />,
+    );
+    const oversized = makeFile("huge.png", 11 * 1024 * 1024);
+
+    pickFile(container, oversized);
+
+    expect(getByText(/too large/i)).toBeTruthy();
+    const sendButton = container.querySelector(
+      'button[aria-label="Send message"]',
+    ) as HTMLButtonElement;
+    expect(sendButton.disabled).toBe(true);
+    fireEvent.click(sendButton);
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it("clears the selection when the chip's remove control is clicked", () => {
+    const { container } = render(<ChatWindow {...baseProps} messages={[]} />);
+    pickFile(container, makeFile("photo.png", 1024));
+    const removeButton = container.querySelector(
+      'button[aria-label="Remove attached photo"]',
+    ) as HTMLButtonElement;
+    expect(removeButton).toBeTruthy();
+
+    fireEvent.click(removeButton);
+
+    const sendButton = container.querySelector(
+      'button[aria-label="Send message"]',
+    ) as HTMLButtonElement;
+    expect(sendButton.disabled).toBe(true);
+    expect(
+      container.querySelector('button[aria-label="Remove attached photo"]'),
+    ).toBeNull();
   });
 });
