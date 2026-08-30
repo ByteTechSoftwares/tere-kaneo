@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createBoardWheelHandler } from "./index";
+import { BOARD_SCROLL_CLASSES, createBoardWheelHandler } from "./index";
 
 // docs/found-issues.md:L79 -- focused unit test of the wheel handler
 // behavior. Does NOT render the whole KanbanBoard (it needs DndContext, a
@@ -161,5 +161,29 @@ describe("createBoardWheelHandler", () => {
     // handler scales line-mode deltas to a usable pixel amount instead.
     expect(board.scrollLeft).toBeGreaterThan(3);
     expect(preventDefault).toHaveBeenCalled();
+  });
+});
+
+// docs/found-issues.md:L79 -- BOARD_SCROLL_CLASSES must reset both
+// standard scrollbar properties (re-enabling the WebKit classic scrollbar
+// on Chromium) and must no longer declare its own scrollbar-color, which
+// is what disabled the WebKit rules in the first place.
+describe("BOARD_SCROLL_CLASSES", () => {
+  it("resets the standard scrollbar properties and keeps the WebKit thumb rules, with no author scrollbar-color", () => {
+    expect(BOARD_SCROLL_CLASSES).toContain("[scrollbar-width:auto]");
+    expect(BOARD_SCROLL_CLASSES).toContain("[scrollbar-color:auto]");
+    expect(BOARD_SCROLL_CLASSES).toContain("[&::-webkit-scrollbar]:h-2.5");
+    expect(BOARD_SCROLL_CLASSES).toContain(
+      "[&::-webkit-scrollbar-track]:bg-transparent",
+    );
+    expect(BOARD_SCROLL_CLASSES).toContain(
+      "[&::-webkit-scrollbar-thumb]:rounded-full",
+    );
+    expect(BOARD_SCROLL_CLASSES).toContain(
+      "[&::-webkit-scrollbar-thumb]:bg-border",
+    );
+    expect(BOARD_SCROLL_CLASSES).not.toContain(
+      "[scrollbar-color:var(--border)_transparent]",
+    );
   });
 });
