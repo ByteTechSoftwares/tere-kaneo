@@ -7,7 +7,13 @@ const mockTask = vi.hoisted(() => ({
     id: "task-1",
     projectId: "project-1",
     title: "RO 9001 — 2019 Chevy Silverado (Gonzalez)",
-  },
+  } as
+    | {
+        id: string;
+        projectId: string;
+        title: string;
+      }
+    | undefined,
 }));
 
 // docs/found-issues.md:L80 -- a hand-built ResizeObserver stand-in. jsdom
@@ -201,5 +207,62 @@ describe("TaskTitle", () => {
       "tasks:detail.titlePlaceholder",
     );
     expect(textarea.tagName).toBe("TEXTAREA");
+  });
+
+  // docs/found-issues.md:L80 -- round 2. The 06-05 ResizeObserver fix
+  // measures correctly but never gets a WIDTH change on the mount path:
+  // its first observation lands at the same too-early moment the
+  // title-keyed effect already fired, records that width, and the
+  // lastWidthRef guard then blocks every later call because the width
+  // never changes again. This case reproduces the real ordering -- no
+  // task on first paint, the task (and its title) arriving on a second
+  // render, exactly as the query resolving does in production -- with
+  // both width-based (ResizeObserver) and font-based mechanisms disabled,
+  // so only a trigger tied to the rendered VALUE can satisfy it.
+  it("re-syncs the pinned height when the task title value arrives after the first paint", () => {
+    mockTask.current = undefined;
+    (globalThis as { ResizeObserver?: unknown }).ResizeObserver = undefined;
+    const originalDocumentFonts = document.fonts;
+    Object.defineProperty(document, "fonts", {
+      value: undefined,
+      configurable: true,
+    });
+
+    const { rerender } = render(<TaskTitle taskId="task-1" />);
+
+    const textarea = screen.getByPlaceholderText(
+      "tasks:detail.titlePlaceholder",
+    ) as HTMLTextAreaElement;
+
+    const wrappingTitle =
+      "Order brake pads — RO 9001 Silverado (via SMS from Diogo Silva Sena)";
+
+    // A real scrollHeight distinguishes a too-early measurement (empty
+    // value, one line) from a settled one (the full wrapping title, two
+    // lines) -- a static faked number can't make that distinction, which
+    // is precisely the distinction this case exists to prove.
+    Object.defineProperty(textarea, "scrollHeight", {
+      configurable: true,
+      get(this: HTMLTextAreaElement) {
+        return this.value === wrappingTitle ? 48 : 25;
+      },
+    });
+
+    mockTask.current = {
+      id: "task-1",
+      projectId: "project-1",
+      title: wrappingTitle,
+    };
+    rerender(<TaskTitle taskId="task-1" />);
+
+    // The value landed (so a failure below can't be blamed on the mock),
+    // then the height that should have been re-measured against it.
+    expect(textarea.value).toBe(wrappingTitle);
+    expect(textarea.style.height).toBe("48px");
+
+    Object.defineProperty(document, "fonts", {
+      value: originalDocumentFonts,
+      configurable: true,
+    });
   });
 });

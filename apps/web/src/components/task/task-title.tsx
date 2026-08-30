@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
 import { Form, FormField } from "@/components/ui/form";
@@ -39,6 +39,11 @@ export default function TaskTitle({ taskId }: TaskTitleProps) {
       title: task?.title || "",
     },
   });
+
+  // docs/found-issues.md:L80 -- round 2. The value react-hook-form
+  // actually rendered into the textarea, NOT task?.title and NOT the
+  // form's own watch() callback (see the useLayoutEffect below).
+  const watchedTitle = useWatch({ control: form.control, name: "title" });
 
   useEffect(() => {
     if (task?.title !== undefined) isInitializedRef.current = true;
@@ -97,18 +102,35 @@ export default function TaskTitle({ taskId }: TaskTitleProps) {
     resyncHeight();
   }, [task?.title, resyncHeight]);
 
-  // docs/found-issues.md:L80 -- the mount/task-switch resync above measures
-  // once, too early: at narrow width the task-detail dialog has not
-  // finished its entrance layout when it fires, so the textarea is
-  // transiently wide, scrollHeight reports one line, and that height is
-  // pinned before the settled narrower width ever wraps the title to a
-  // second line. A ResizeObserver re-runs the same resync whenever the
-  // textarea's own width actually changes (its entrance layout settling,
-  // or a later viewport/panel resize) so the pinned height always matches
-  // the settled width. Guarded on API availability (jsdom/SSR renders
-  // unchanged) and on the observed width actually changing -- resyncHeight
-  // itself writes the element's inline height, which is a box change the
-  // observer would otherwise re-observe and re-enter on forever.
+  // docs/found-issues.md:L80 -- round 2. The effect above and the
+  // ResizeObserver below both fire at the same too-early moment: react
+  // has not yet written the resolved title into the textarea's DOM value
+  // when they run. Subscribing to the value react-hook-form actually
+  // rendered (via useWatch above, NOT the form's own watch() callback,
+  // which fires synchronously on the form's internal notification BEFORE
+  // React re-renders the controlled field and writes the DOM value -- it
+  // would measure the stale value and silently reintroduce this bug)
+  // re-renders this component when that value lands, and a layout effect
+  // keyed on it fires after the commit that writes the DOM -- so
+  // scrollHeight is read against the real title, not an empty or stale
+  // box. This is the fix for the round-2 mount clip.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: watchedTitle triggers the resync when the rendered value changes; it is not read inside the body
+  useLayoutEffect(() => {
+    resyncHeight();
+  }, [watchedTitle, resyncHeight]);
+
+  // docs/found-issues.md:L80 -- round 2 established that this observer's
+  // measurement code was always correct, but its trigger was not: its
+  // first observation lands at the same too-early moment the title-keyed
+  // effect above already fires, records that width via lastWidthRef, and
+  // is then correctly silent for the rest of the mount because the
+  // textarea's width never changes again on this path -- proven live by
+  // forcing a real width change (457 -> 479px), which the observer does
+  // self-correct on. What was missing was a trigger tied to the CONTENT
+  // becoming measurable rather than the width changing: the useWatch-keyed
+  // effect above and the font-ready effect below now provide that. This
+  // observer stays, unchanged, for the case it always served correctly --
+  // a genuine width change (viewport resize, panel resize).
   const lastWidthRef = useRef<number | null>(null);
 
   useLayoutEffect(() => {
@@ -124,6 +146,26 @@ export default function TaskTitle({ taskId }: TaskTitleProps) {
     observer.observe(el);
 
     return () => observer.disconnect();
+  }, [resyncHeight]);
+
+  // docs/found-issues.md:L80 -- round 2, defense in depth. The web app
+  // self-hosts the Geist variable font; a font swap after the first
+  // measurement changes the wrap point with no width change and no value
+  // change, a case neither trigger above covers. typeof-guards document
+  // for SSR, optional-chains the font-loading API's ready promise (skips
+  // cleanly on jsdom/any environment without it), and the cancelled flag
+  // set in cleanup makes a late resolution after unmount a no-op --
+  // resyncHeight also null-checks its ref, so this is belt and braces.
+  useEffect(() => {
+    let cancelled = false;
+    if (typeof document === "undefined") return;
+    document.fonts?.ready?.then(() => {
+      if (cancelled) return;
+      resyncHeight();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [resyncHeight]);
 
   // docs/found-issues.md:L80 -- a title is single-line semantically even
