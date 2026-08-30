@@ -31,14 +31,22 @@ type KanbanBoardProps = {
   disableDragDrop?: boolean;
 };
 
-// docs/found-issues.md:L79 -- an explicit thumb rule takes a WebKit
-// scrollbar out of macOS overlay mode so it renders at rest, not only
-// mid-scroll. index.css already ships the width/track/scrollbar-width
-// halves globally; this const is the two board scroll containers' own
-// thumb + Firefox color declaration, kept local so no other scroll
-// surface in the app is restyled.
-const BOARD_SCROLL_CLASSES =
-  "[scrollbar-color:var(--border)_transparent] [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border";
+// docs/found-issues.md:L79 -- Chromium disables every `::-webkit-scrollbar*`
+// pseudo-element rule on any element whose used standard scrollbar
+// properties (`scrollbar-width`/`scrollbar-color`) are non-default.
+// index.css's global `* { scrollbar-width: thin; scrollbar-color: ... }`
+// (and the prior version of this const, which set its own scrollbar-color)
+// left those standard properties non-default on the board's scroll
+// containers, so the WebKit thumb rules below never engaged and macOS
+// overlay scrollbars won -- invisible at rest, a thumb only during an
+// active scroll. Resetting both standard properties to `auto` on these two
+// containers re-enables the classic WebKit scrollbar engine via ordinary
+// class-selector specificity (a class selector beats index.css's universal
+// selector), so index.css itself needs no change and gets none (D-25).
+// Firefox ignores the WebKit pseudos entirely and falls back to its own
+// default scrollbar -- an accepted trade, no @supports branch.
+export const BOARD_SCROLL_CLASSES =
+  "[scrollbar-width:auto] [scrollbar-color:auto] [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border";
 
 // docs/found-issues.md:L79 -- a column still has vertical room in the
 // wheel's direction, so the board must not steal the event from it.
