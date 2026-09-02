@@ -487,6 +487,7 @@ export const auth = betterAuth({
           {
             inviterEmail: data.inviter.user.email,
             inviterName: data.inviter.user.name,
+            inviterImage: data.inviter.user.image,
             workspaceName: data.organization.name,
             invitationLink: inviteLink,
             to: data.email,

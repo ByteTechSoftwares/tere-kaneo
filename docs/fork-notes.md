@@ -446,8 +446,8 @@ finishes the string sweep.
 
 | File | What it is |
 |---|---|
-| `packages/email/src/templates/anota-shell.tsx` | The email shell every template renders through: dark `#141414` note-card band with the hosted mascot (`${origin}/apple-touch-icon.png`, origin from `KANEO_CLIENT_URL` or the link being sent), live-text `Anota` wordmark and instance host line, light body, host colophon. Exports `styles` with the same keys upstream's shell exported (plus `subtitle`) and a `variant` (`band` default, `light`). Achromatic per the approved brand kit; degrades to text-only when a client blocks remote images. |
-| `packages/email/src/templates/anota-workspace-invitation.tsx` | The invitation email on that shell: title, inviter initials chip beside the locale subtitle, one dark CTA, the accept URL in plain text, locale footer. Same props and `copy` contract as upstream's template, `DEFAULT_COPY` kept in sync with `i18n/en-US.json` by the existing test. |
+| `packages/email/src/templates/anota-shell.tsx` | The email shell every template renders through, centered end to end (operator's call 2026-09-02 over a left-aligned first cut): dark `#141414` note-card band with the hosted mascot (`${origin}/apple-touch-icon.png`, origin from `KANEO_CLIENT_URL` or the link being sent), live-text `Anota` wordmark and instance host line stacked under it, light centered body, host colophon. Centering uses `align="center"` on table cells plus `text-align` per text block — the only mechanisms every mail engine honours. Exports `styles` with the same keys upstream's shell exported (plus `subtitle`) and a `variant` (`band` default, `light`). Achromatic per the approved brand kit; degrades to text-only when a client blocks remote images. |
+| `packages/email/src/templates/anota-workspace-invitation.tsx` | The invitation email on that shell: title, the inviter's profile picture (new optional `inviterImage` prop — an absolute URL or Anota's `/api/user/avatar/<id>` path resolved against the instance origin; that route is public and cacheable) or an initials chip when they have none, the locale subtitle, one dark CTA, the accept URL in plain text, locale footer. Same props and `copy` contract as upstream's template plus that one prop; `DEFAULT_COPY` kept in sync with `i18n/en-US.json` by the existing test. |
 
 ### Upstream files edited directly, and why no override seam existed
 
@@ -455,6 +455,7 @@ finishes the string sweep.
 |---|---|---|
 | `packages/email/src/templates/shell.tsx` | Body replaced by one line: `export { AnotaEmailShell as EmailShell, styles } from "./anota-shell";` | Six templates import `EmailShell`/`styles` from `./shell` and upstream offers no shell injection point; re-exporting from the upstream path is the single edit that reaches all of them. On merge: keep the re-export, port any new `styles` key upstream adds into `anota-shell.tsx`. |
 | `packages/email/src/templates/workspace-invitation.tsx` | Body replaced by a re-export of the Anota template's default export and its two types | `send-email.tsx`, `apps/api/src/auth.ts`, the locale helpers and `workspace-invitation.test.ts` all import from this path; the re-export keeps every consumer and the test unchanged. On merge: keep the re-export, port prop/copy additions into the Anota template. |
+| `apps/api/src/auth.ts` | One line in the `sendInvitationEmail` hook: `inviterImage: data.inviter.user.image,` | better-auth hands the inviter's full user record to this hook and nothing else touches the template, so the picture only reaches the email if the call site passes it. On merge: keep the line; if upstream's template ever grows its own picture prop, map to that name. |
 | `packages/email/src/templates/{notification,magic-link,password-reset,otp}.tsx` | Product-name strings `Kaneo` → `Anota` in the inlined en/de/vi copy (text only) | These templates inline their copy rather than reading i18n; same class of edit as the 02.1-02 string sweep. `trial-reminder.tsx` deliberately untouched — it is Kaneo-Cloud-only content that never sends on a self-hosted instance. |
 | `i18n/{de-DE,fr-FR,pt-BR,vi-VN}.json` (`invitations.email` block only) | `Kaneo` → `Anota` in subject/preview/subtitle/footer | These four are exactly the locales `apps/api/src/utils/get-workspace-invitation-email-copy.ts` can serve (the email path resolves the USER's stored locale server-side, so `pt-BR` is reachable for this team even though no browser resolves to it). `en-US` and `es-ES` were already correct. The other eleven locale files keep the 02.1-02 ruling: unreachable here, so editing them is churn against D-25. Files re-serialised with the same tab indentation; diff is exactly the four lines per file. |
 
@@ -463,7 +464,7 @@ finishes the string sweep.
 Recorded in the PR body and in shop-ops `07-08-SUMMARY.md`: `pnpm run build` (tsc) exit 0,
 `pnpm test` (vitest) 3 files / 11 tests passed, `pnpm exec biome check src` clean.
 Previews rendered with `@react-email/render` and screenshotted at 640 px and 375 px; the
-operator chose the shipped variant from those.
+operator chose the shipped variant from those. Second round the same day after the operator rejected the left-aligned layout: everything centered and the inviter's picture wired through; gates re-run — email `tsc` exit 0, vitest 3 files / 11 tests, biome clean, `apps/api` `tsc --noEmit` exit 0.
 
 ### CI image build result
 

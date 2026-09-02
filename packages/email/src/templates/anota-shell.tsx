@@ -17,14 +17,18 @@ import React from "react";
 void React;
 
 // Anota's transactional-email shell (D-25 fork file). Every template renders
-// through this: the dark note-card band carrying the mascot and wordmark, then
-// the light body. `shell.tsx` re-exports it so upstream templates need no
-// import changes. Identity is the approved achromatic kit
-// (docs/brand-kit.md in tere-shop-ops): #141414 ground, #F5F5F5 ink, no hue.
+// through this: a centered dark note-card band carrying the mascot, the
+// wordmark and the instance host, then a centered light body. `shell.tsx`
+// re-exports it so upstream templates need no import changes. Identity is the
+// approved achromatic kit (docs/brand-kit.md in tere-shop-ops): #141414
+// ground, #F5F5F5 ink, no hue. Everything is centered — the operator's call
+// (2026-09-02) over the left-aligned first cut.
 //
-// Images are optional by design — most clients hide remote images from a
+// Images are optional by design — some clients hide remote images from a
 // first-time sender, so the lockup keeps a live-text wordmark and the host
-// line, and the layout reads correctly with images blocked.
+// line, and the layout reads correctly with images blocked. Centering is done
+// with `align="center"` on table cells (the one mechanism every mail engine
+// honours) plus `text-align` on each text block, never on the body alone.
 
 export type AnotaEmailShellVariant = "band" | "light";
 
@@ -94,34 +98,26 @@ export function AnotaEmailShell({
         <Container style={container}>
           <Section style={card}>
             <Row>
-              <Column style={dark ? bandCell : lightHeaderCell}>
-                <Row>
-                  {markSrc ? (
-                    <Column style={markCell}>
-                      <Img
-                        src={markSrc}
-                        width="52"
-                        height="52"
-                        alt="Anota"
-                        style={mark}
-                      />
-                    </Column>
-                  ) : null}
-                  <Column style={lockupCell}>
-                    <Text style={dark ? wordmarkOnDark : wordmarkOnLight}>
-                      Anota
-                    </Text>
-                    {host ? (
-                      <Text style={dark ? hostOnDark : hostOnLight}>
-                        {host}
-                      </Text>
-                    ) : null}
-                  </Column>
-                </Row>
+              <Column align="center" style={dark ? bandCell : lightHeaderCell}>
+                {markSrc ? (
+                  <Img
+                    src={markSrc}
+                    width="56"
+                    height="56"
+                    alt="Anota"
+                    style={mark}
+                  />
+                ) : null}
+                <Text style={dark ? wordmarkOnDark : wordmarkOnLight}>
+                  Anota
+                </Text>
+                {host ? (
+                  <Text style={dark ? hostOnDark : hostOnLight}>{host}</Text>
+                ) : null}
               </Column>
             </Row>
             <Row>
-              <Column style={bodyCell}>
+              <Column align="center" style={bodyCell}>
                 <Heading as="h1" style={heading}>
                   {title}
                 </Heading>
@@ -150,30 +146,36 @@ export function AnotaEmailShell({
 }
 
 // Shared styles consumed by every template (same keys upstream's shell
-// exported, so nothing else needs to change).
+// exported, so nothing else needs to change). All text blocks are centered.
 export const styles = {
   subtitle: {
-    margin: "0 0 22px",
+    margin: "0 auto 24px",
+    maxWidth: "420px",
+    textAlign: "center" as const,
     color: "#525252",
     fontSize: "15px",
     lineHeight: "24px",
   },
   paragraph: {
-    margin: "0 0 14px",
+    margin: "0 auto 14px",
+    maxWidth: "420px",
+    textAlign: "center" as const,
     color: "#404040",
     fontSize: "15px",
     lineHeight: "24px",
   },
   muted: {
-    margin: "0",
+    margin: "0 auto",
+    maxWidth: "420px",
+    textAlign: "center" as const,
     color: "#737373",
     fontSize: "13px",
     lineHeight: "20px",
   },
   button: {
     display: "inline-block",
-    margin: "6px 0 22px",
-    padding: "13px 26px",
+    margin: "4px 0 24px",
+    padding: "14px 30px",
     borderRadius: "10px",
     color: "#fafafa",
     backgroundColor: INK,
@@ -182,9 +184,10 @@ export const styles = {
     fontWeight: "600",
     lineHeight: "20px",
     letterSpacing: "-0.01em",
+    textAlign: "center" as const,
   },
   code: {
-    margin: "6px 0 18px",
+    margin: "6px auto 18px",
     textAlign: "center" as const,
     padding: "16px 20px",
     borderRadius: "12px",
@@ -198,10 +201,11 @@ export const styles = {
   },
   divider: {
     borderTop: `1px solid ${RULE}`,
-    margin: "22px 0 16px",
+    margin: "24px 0 16px",
   },
   footer: {
     margin: "0",
+    textAlign: "center" as const,
     color: "#6b6b6b",
     fontSize: "12px",
     lineHeight: "18px",
@@ -233,36 +237,30 @@ const card = {
 const bandCell = {
   backgroundColor: INK,
   borderRadius: "18px 18px 0 0",
-  padding: "26px 32px",
+  padding: "34px 32px 28px",
+  textAlign: "center" as const,
 };
 
 const lightHeaderCell = {
   backgroundColor: PAPER,
   borderRadius: "18px 18px 0 0",
   borderBottom: `1px solid ${RULE}`,
-  padding: "24px 32px 20px",
-};
-
-const markCell = {
-  width: "52px",
-  verticalAlign: "middle" as const,
+  padding: "32px 32px 24px",
+  textAlign: "center" as const,
 };
 
 const mark = {
   display: "block",
-  borderRadius: "13px",
-};
-
-const lockupCell = {
-  paddingLeft: "14px",
-  verticalAlign: "middle" as const,
+  margin: "0 auto 14px",
+  borderRadius: "14px",
 };
 
 const wordmarkOnDark = {
   margin: "0",
+  textAlign: "center" as const,
   color: "#f5f5f5",
-  fontSize: "22px",
-  lineHeight: "26px",
+  fontSize: "24px",
+  lineHeight: "28px",
   fontWeight: "700",
   letterSpacing: "-0.02em",
 };
@@ -273,7 +271,8 @@ const wordmarkOnLight = {
 };
 
 const hostOnDark = {
-  margin: "3px 0 0",
+  margin: "4px 0 0",
+  textAlign: "center" as const,
   color: "#a3a3a3",
   fontSize: "12px",
   lineHeight: "16px",
@@ -286,11 +285,13 @@ const hostOnLight = {
 };
 
 const bodyCell = {
-  padding: "30px 32px 28px",
+  padding: "34px 36px 30px",
+  textAlign: "center" as const,
 };
 
 const heading = {
   margin: "0 0 10px",
+  textAlign: "center" as const,
   color: "#171717",
   fontSize: "26px",
   lineHeight: "32px",
@@ -303,6 +304,7 @@ const subtitleText = styles.subtitle;
 
 const body = {
   margin: "0",
+  textAlign: "center" as const,
 };
 
 const colophon = {

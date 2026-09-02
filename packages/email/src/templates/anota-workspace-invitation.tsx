@@ -1,8 +1,9 @@
-import { Column, Link, Row, Section, Text } from "@react-email/components";
+import { Img, Link, Section, Text } from "@react-email/components";
 import React from "react";
 import {
   AnotaEmailShell,
   type AnotaEmailShellVariant,
+  FONT_STACK,
   resolveOrigin,
   styles,
 } from "./anota-shell";
@@ -10,13 +11,20 @@ import {
 void React;
 
 // Anota's workspace-invitation email (D-25 fork file). Same props and copy
-// contract as upstream's template — `workspace-invitation.tsx` re-exports
-// this, so auth.ts, the locale helpers and the i18n bundles are untouched.
+// contract as upstream's template plus `inviterImage` — the inviter's Anota
+// profile picture — so `workspace-invitation.tsx` re-exports this and
+// auth.ts, the locale helpers and the i18n bundles stay untouched.
 
 export type WorkspaceInvitationEmailProps = {
   workspaceName: string;
   inviterName: string;
   inviterEmail: string;
+  /**
+   * The inviter's profile picture: an absolute URL, or the `/api/user/avatar/<id>`
+   * path Anota stores for an uploaded avatar (resolved against the instance
+   * the invitation link points at). Without one, the inviter's initials show.
+   */
+  inviterImage?: string | null;
   invitationLink: string;
   to: string;
   copy?: WorkspaceInvitationEmailCopy;
@@ -58,7 +66,7 @@ function interpolate(template: string, values: Record<string, string>) {
 }
 
 // "Mario Silva" -> "MS"; falls back to the first letter of the email.
-function initialsOf(name: string, email: string): string {
+export function initialsOf(name: string, email: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   const fromName = words
     .slice(0, 2)
@@ -68,10 +76,25 @@ function initialsOf(name: string, email: string): string {
   return (fromName || fromEmail).toUpperCase();
 }
 
+// Absolute http(s) URLs pass through; Anota's own `/api/user/avatar/<id>`
+// paths resolve against the instance origin (the avatar route is public and
+// cache-friendly, so mail clients can fetch it). Anything else — a data URL,
+// a bare filename, no origin to resolve against — yields the initials chip.
+export function resolveInviterImage(
+  image: string | null | undefined,
+  origin: string,
+): string | null {
+  if (!image) return null;
+  if (/^https?:\/\//i.test(image)) return image;
+  if (image.startsWith("/") && origin) return `${origin}${image}`;
+  return null;
+}
+
 const AnotaWorkspaceInvitationEmail = ({
   workspaceName,
   inviterName,
   inviterEmail,
+  inviterImage,
   invitationLink,
   to,
   copy = DEFAULT_COPY,
@@ -79,30 +102,52 @@ const AnotaWorkspaceInvitationEmail = ({
 }: WorkspaceInvitationEmailProps) => {
   const values = { workspaceName, inviterName, inviterEmail };
   const acceptHref = `${invitationLink}?email=${encodeURIComponent(to)}`;
+  const origin = resolveOrigin(invitationLink);
+  const initials = initialsOf(inviterName, inviterEmail);
+  const avatarSrc = resolveInviterImage(inviterImage, origin);
 
   return (
     <AnotaEmailShell
       preview={interpolate(copy.preview, values)}
       title={interpolate(copy.title, values)}
       subtitle={
-        <Row style={inviterRow}>
-          <Column style={chipCell}>
-            <Text style={chip}>{initialsOf(inviterName, inviterEmail)}</Text>
-          </Column>
-          <Column style={inviterCell}>
-            <Text style={inviterText}>
-              {interpolate(copy.subtitle, values)}
-            </Text>
-          </Column>
-        </Row>
+        <Section style={inviterBlock}>
+          {avatarSrc ? (
+            <Img
+              src={avatarSrc}
+              width="56"
+              height="56"
+              alt={initials}
+              style={avatar}
+            />
+          ) : (
+            <table
+              role="presentation"
+              align="center"
+              border={0}
+              cellPadding={0}
+              cellSpacing={0}
+              style={chipTable}
+            >
+              <tbody>
+                <tr>
+                  <td style={chipCell}>{initials}</td>
+                </tr>
+              </tbody>
+            </table>
+          )}
+          <Text style={inviterText}>{interpolate(copy.subtitle, values)}</Text>
+        </Section>
       }
-      origin={resolveOrigin(invitationLink)}
+      origin={origin}
       variant={variant}
     >
-      <Section>
-        <Link style={styles.button} href={acceptHref}>
-          {copy.cta}
-        </Link>
+      <Section style={content}>
+        <Text style={ctaRow}>
+          <Link style={styles.button} href={acceptHref}>
+            {copy.cta}
+          </Link>
+        </Text>
         <Text style={styles.paragraph}>{copy.sameEmail}</Text>
         <Text style={styles.muted}>{copy.ignore}</Text>
         <Section style={styles.divider} />
@@ -117,47 +162,62 @@ const AnotaWorkspaceInvitationEmail = ({
   );
 };
 
-// Who is asking: an initials chip beside the locale subtitle, built from the
-// inviter's name — live text, so it survives image-blocking clients.
-const inviterRow = {
-  margin: "0 0 22px",
-};
-
-const chipCell = {
-  width: "36px",
-  verticalAlign: "top" as const,
-};
-
-const chip = {
-  display: "block",
-  width: "36px",
-  height: "36px",
-  margin: "0",
-  borderRadius: "18px",
-  border: "1px solid #e5e5e5",
-  backgroundColor: "#f4f4f5",
-  color: "#141414",
-  fontSize: "13px",
-  lineHeight: "36px",
-  fontWeight: "600",
-  letterSpacing: "0.04em",
+// Who is asking: the inviter's picture (or initials) centered above the
+// locale subtitle. The chip is a one-cell table so its size and shape hold in
+// every mail engine; the picture carries the initials as alt text for clients
+// that block remote images.
+const inviterBlock = {
+  margin: "0 0 26px",
   textAlign: "center" as const,
 };
 
-const inviterCell = {
-  paddingLeft: "12px",
-  verticalAlign: "top" as const,
+const avatar = {
+  display: "block",
+  margin: "0 auto",
+  borderRadius: "28px",
+  border: "1px solid #e5e5e5",
+};
+
+const chipTable = {
+  margin: "0 auto",
+};
+
+const chipCell = {
+  width: "56px",
+  height: "56px",
+  borderRadius: "28px",
+  border: "1px solid #e5e5e5",
+  backgroundColor: "#f4f4f5",
+  color: "#141414",
+  fontFamily: FONT_STACK,
+  fontSize: "17px",
+  lineHeight: "56px",
+  fontWeight: "600",
+  letterSpacing: "0.04em",
+  textAlign: "center" as const,
+  verticalAlign: "middle" as const,
 };
 
 const inviterText = {
   ...styles.subtitle,
-  margin: "6px 0 0",
+  margin: "14px auto 0",
+};
+
+const content = {
+  textAlign: "center" as const,
+};
+
+const ctaRow = {
+  margin: "0",
+  textAlign: "center" as const,
 };
 
 // The accept URL in plain text: survives image- and button-blocking clients,
 // and lets a wary new hire read the domain before clicking anything.
 const fallbackLink = {
-  margin: "0 0 12px",
+  margin: "0 auto 12px",
+  maxWidth: "440px",
+  textAlign: "center" as const,
   color: "#6b6b6b",
   fontSize: "12px",
   lineHeight: "18px",
