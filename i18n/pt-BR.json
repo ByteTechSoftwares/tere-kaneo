@@ -1958,14 +1958,14 @@
 	},
 	"invitations": {
 		"email": {
-			"subject": "{{inviterName}} convidou você para participar de {{workspaceName}} no Kaneo",
-			"preview": "Você foi convidado para {{workspaceName}} no Kaneo",
+			"subject": "{{inviterName}} convidou você para participar de {{workspaceName}} no Anota",
+			"preview": "Você foi convidado para {{workspaceName}} no Anota",
 			"title": "Entrar em {{workspaceName}}",
-			"subtitle": "{{inviterName}} ({{inviterEmail}}) convidou você para colaborar no Kaneo.",
+			"subtitle": "{{inviterName}} ({{inviterEmail}}) convidou você para colaborar no Anota.",
 			"cta": "Aceitar convite",
 			"sameEmail": "Você pode aceitar com o mesmo e-mail que recebeu esta mensagem.",
 			"ignore": "Se isso não era esperado, você pode ignorar este e-mail com segurança.",
-			"footer": "Convite para espaço de trabalho do Kaneo"
+			"footer": "Convite para espaço de trabalho do Anota"
 		},
 		"pageTitle": "Convites",
 		"pendingInvitations": "Convites pendentes",

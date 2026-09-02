@@ -431,3 +431,43 @@ image line is versioned independently of upstream's numbers and is never `:lates
 Full run id, GHCR verification (both the index digest and the `linux/amd64` platform-leg
 digest), and rollback tag: `deploy/render.md`'s 2026-08-28/29 version-bump log entries
 (shop-ops repo).
+
+## Phase 07 Plan 08 — Anota-branded transactional email (INVITE-01)
+
+Branch: `anota/branded-invitation-email`. Mail delivery went live in shop-ops plan 07-07
+(Resend SMTP on Render), which made every email this instance sends user-visible for the
+first time. Upstream's shared shell still carried a `Kaneo` badge and the four email-reachable locales' (de, fr, pt, vi)
+`invitations.email` copy still said "Kaneo" — both missed by the 02.1-02 rebrand sweep
+because `packages/email/` and the `invitations.email` block sat outside its grep scope
+(shop-ops `docs/found-issues.md` L55). This plan replaces the shell with an Anota one and
+finishes the string sweep.
+
+### Fork-owned files (new, Anota-namespaced, no upstream counterpart)
+
+| File | What it is |
+|---|---|
+| `packages/email/src/templates/anota-shell.tsx` | The email shell every template renders through: dark `#141414` note-card band with the hosted mascot (`${origin}/apple-touch-icon.png`, origin from `KANEO_CLIENT_URL` or the link being sent), live-text `Anota` wordmark and instance host line, light body, host colophon. Exports `styles` with the same keys upstream's shell exported (plus `subtitle`) and a `variant` (`band` default, `light`). Achromatic per the approved brand kit; degrades to text-only when a client blocks remote images. |
+| `packages/email/src/templates/anota-workspace-invitation.tsx` | The invitation email on that shell: title, inviter initials chip beside the locale subtitle, one dark CTA, the accept URL in plain text, locale footer. Same props and `copy` contract as upstream's template, `DEFAULT_COPY` kept in sync with `i18n/en-US.json` by the existing test. |
+
+### Upstream files edited directly, and why no override seam existed
+
+| File | What changed | Why a direct edit (no seam) |
+|---|---|---|
+| `packages/email/src/templates/shell.tsx` | Body replaced by one line: `export { AnotaEmailShell as EmailShell, styles } from "./anota-shell";` | Six templates import `EmailShell`/`styles` from `./shell` and upstream offers no shell injection point; re-exporting from the upstream path is the single edit that reaches all of them. On merge: keep the re-export, port any new `styles` key upstream adds into `anota-shell.tsx`. |
+| `packages/email/src/templates/workspace-invitation.tsx` | Body replaced by a re-export of the Anota template's default export and its two types | `send-email.tsx`, `apps/api/src/auth.ts`, the locale helpers and `workspace-invitation.test.ts` all import from this path; the re-export keeps every consumer and the test unchanged. On merge: keep the re-export, port prop/copy additions into the Anota template. |
+| `packages/email/src/templates/{notification,magic-link,password-reset,otp}.tsx` | Product-name strings `Kaneo` → `Anota` in the inlined en/de/vi copy (text only) | These templates inline their copy rather than reading i18n; same class of edit as the 02.1-02 string sweep. `trial-reminder.tsx` deliberately untouched — it is Kaneo-Cloud-only content that never sends on a self-hosted instance. |
+| `i18n/{de-DE,fr-FR,pt-BR,vi-VN}.json` (`invitations.email` block only) | `Kaneo` → `Anota` in subject/preview/subtitle/footer | These four are exactly the locales `apps/api/src/utils/get-workspace-invitation-email-copy.ts` can serve (the email path resolves the USER's stored locale server-side, so `pt-BR` is reachable for this team even though no browser resolves to it). `en-US` and `es-ES` were already correct. The other eleven locale files keep the 02.1-02 ruling: unreachable here, so editing them is churn against D-25. Files re-serialised with the same tab indentation; diff is exactly the four lines per file. |
+
+### Local gate output (pre-merge)
+
+Recorded in the PR body and in shop-ops `07-08-SUMMARY.md`: `pnpm run build` (tsc) exit 0,
+`pnpm test` (vitest) 3 files / 11 tests passed, `pnpm exec biome check src` clean.
+Previews rendered with `@react-email/render` and screenshotted at 640 px and 375 px; the
+operator chose the shipped variant from those.
+
+### CI image build result
+
+Built from fork `main` post-merge via `gh workflow run build-image.yml -f version=1.3.3`
+(patch bump over the live `1.3.2`: templates and strings only, no migration, no schema
+change). Run id, GHCR digests and the Render cutover: shop-ops `deploy/render.md`
+2026-09-02 rows.
