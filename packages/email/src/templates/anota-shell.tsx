@@ -56,7 +56,7 @@ const GROUND = "#f4f4f5";
 const RULE = "#e5e5e5";
 
 export function resolveOrigin(origin?: string): string {
-  const candidate = origin ?? process.env.KANEO_CLIENT_URL ?? "";
+  const candidate = origin || process.env.KANEO_CLIENT_URL || "";
   try {
     return candidate ? new URL(candidate).origin : "";
   } catch {

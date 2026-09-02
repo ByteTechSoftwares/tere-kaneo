@@ -70,9 +70,9 @@ export function initialsOf(name: string, email: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   const fromName = words
     .slice(0, 2)
-    .map((word) => word[0] ?? "")
+    .map((word) => Array.from(word)[0] ?? "")
     .join("");
-  const fromEmail = email.trim()[0] ?? "";
+  const fromEmail = Array.from(email.trim())[0] ?? "";
   return (fromName || fromEmail).toUpperCase();
 }
 
@@ -171,11 +171,21 @@ const inviterBlock = {
   textAlign: "center" as const,
 };
 
+// Carries the chip's typography too, so a client that blocks the picture
+// shows the alt-text initials in the same styled circle.
 const avatar = {
   display: "block",
   margin: "0 auto",
   borderRadius: "28px",
   border: "1px solid #e5e5e5",
+  backgroundColor: "#f4f4f5",
+  color: "#141414",
+  fontFamily: FONT_STACK,
+  fontSize: "17px",
+  lineHeight: "56px",
+  fontWeight: "600",
+  letterSpacing: "0.04em",
+  textAlign: "center" as const,
 };
 
 const chipTable = {
