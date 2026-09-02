@@ -17,16 +17,16 @@ import React from "react";
 void React;
 
 // Anota's transactional-email shell (D-25 fork file). Every template renders
-// through this: a centered dark note-card band carrying the mascot, the
-// wordmark and the instance host, then a centered light body. `shell.tsx`
+// through this: a short centered dark band carrying the app's own lockup
+// (mascot and wordmark side by side), then a centered light body. `shell.tsx`
 // re-exports it so upstream templates need no import changes. Identity is the
 // approved achromatic kit (docs/brand-kit.md in tere-shop-ops): #141414
 // ground, #F5F5F5 ink, no hue. Everything is centered — the operator's call
 // (2026-09-02) over the left-aligned first cut.
 //
 // Images are optional by design — some clients hide remote images from a
-// first-time sender, so the lockup keeps a live-text wordmark and the host
-// line, and the layout reads correctly with images blocked. Centering is done
+// first-time sender, so the lockup image carries styled alt text (a white
+// "Anota" on the band) and the host stays in live text in the colophon. Centering is done
 // with `align="center"` on table cells (the one mechanism every mail engine
 // honours) plus `text-align` on each text block, never on the body alone.
 
@@ -82,10 +82,13 @@ export function AnotaEmailShell({
 }: AnotaEmailShellProps) {
   const resolvedOrigin = resolveOrigin(origin);
   const host = hostOf(resolvedOrigin);
-  const markSrc = resolvedOrigin
-    ? `${resolvedOrigin}/apple-touch-icon.png`
-    : null;
   const dark = variant === "band";
+  // The app's own header lockup (mascot + wordmark, apps/web/public/
+  // logo-{light,dark}.svg) rasterised on a solid band/paper ground so it sits
+  // flush — mail clients do not render SVG, and an alpha edge rings on dark.
+  const lockupSrc = resolvedOrigin
+    ? `${resolvedOrigin}/email-lockup-${dark ? "dark" : "light"}.png`
+    : null;
 
   return (
     <Html>
@@ -99,21 +102,19 @@ export function AnotaEmailShell({
           <Section style={card}>
             <Row>
               <Column align="center" style={dark ? bandCell : lightHeaderCell}>
-                {markSrc ? (
+                {lockupSrc ? (
                   <Img
-                    src={markSrc}
-                    width="56"
-                    height="56"
+                    src={lockupSrc}
+                    width="118"
+                    height="32"
                     alt="Anota"
-                    style={mark}
+                    style={dark ? lockupOnDark : lockupOnLight}
                   />
-                ) : null}
-                <Text style={dark ? wordmarkOnDark : wordmarkOnLight}>
-                  Anota
-                </Text>
-                {host ? (
-                  <Text style={dark ? hostOnDark : hostOnLight}>{host}</Text>
-                ) : null}
+                ) : (
+                  <Text style={dark ? wordmarkOnDark : wordmarkOnLight}>
+                    Anota
+                  </Text>
+                )}
               </Column>
             </Row>
             <Row>
@@ -237,7 +238,7 @@ const card = {
 const bandCell = {
   backgroundColor: INK,
   borderRadius: "18px 18px 0 0",
-  padding: "34px 32px 28px",
+  padding: "20px 32px",
   textAlign: "center" as const,
 };
 
@@ -245,22 +246,35 @@ const lightHeaderCell = {
   backgroundColor: PAPER,
   borderRadius: "18px 18px 0 0",
   borderBottom: `1px solid ${RULE}`,
-  padding: "32px 32px 24px",
+  padding: "20px 32px",
   textAlign: "center" as const,
 };
 
-const mark = {
+// Styled alt text: when the image is blocked, "Anota" renders in the band's
+// ink at wordmark weight instead of an empty box.
+const lockupOnDark = {
   display: "block",
-  margin: "0 auto 14px",
-  borderRadius: "14px",
+  margin: "0 auto",
+  color: "#f5f5f5",
+  fontSize: "20px",
+  lineHeight: "32px",
+  fontWeight: "700",
+  letterSpacing: "-0.02em",
+  textAlign: "center" as const,
 };
 
+const lockupOnLight = {
+  ...lockupOnDark,
+  color: INK,
+};
+
+// Text-only lockup for the no-origin case (no instance URL to load from).
 const wordmarkOnDark = {
   margin: "0",
   textAlign: "center" as const,
   color: "#f5f5f5",
-  fontSize: "24px",
-  lineHeight: "28px",
+  fontSize: "22px",
+  lineHeight: "32px",
   fontWeight: "700",
   letterSpacing: "-0.02em",
 };
@@ -268,20 +282,6 @@ const wordmarkOnDark = {
 const wordmarkOnLight = {
   ...wordmarkOnDark,
   color: INK,
-};
-
-const hostOnDark = {
-  margin: "4px 0 0",
-  textAlign: "center" as const,
-  color: "#a3a3a3",
-  fontSize: "12px",
-  lineHeight: "16px",
-  letterSpacing: "0.01em",
-};
-
-const hostOnLight = {
-  ...hostOnDark,
-  color: "#737373",
 };
 
 const bodyCell = {
