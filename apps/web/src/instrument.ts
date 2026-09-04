@@ -30,12 +30,13 @@ if (dsn && !dsn.startsWith("KANEO_")) {
       if (event.tags?.area === "auth.session") return null;
       return event;
     },
-    integrations: [
-      Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration(),
-    ],
+    // Session Replay stays OFF, deliberately: Anota is an internal shop tool
+    // handling staff activity, not a public product, so recording browser
+    // interaction is a privacy call we won't make by SDK default. This
+    // applies even once a real VITE_SENTRY_DSN is set. Re-enabling replay is
+    // a decision to make explicitly here, not an accident of the SDK default
+    // (docs/found-issues.md L23 / fork-notes.md).
+    integrations: [Sentry.browserTracingIntegration()],
     tracesSampleRate: 0.1,
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
   });
 }
