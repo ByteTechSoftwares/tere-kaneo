@@ -474,3 +474,43 @@ rows are the log of record for the `build-image.yml` run (`-f version=1.3.3`, a 
 the live `1.3.2` — templates, strings and two static assets, no migration, no schema change),
 the GHCR digests and the Render cutover. This section describes the code on the branch; it
 makes no claim about what has been built or deployed.
+
+## Found-issues sweep 2026-09-03 (shop-ops ledger)
+
+Branch: `fix/found-issues-20260903`. Six `[open]` entries from shop-ops `docs/found-issues.md`
+(L18, L23, L83, L84, L85, L95), re-verified still-valid against `origin/main` (`bd0a617d`)
+before each fix. No new fork-owned files — every change is a minimal, surgical edit to an
+existing upstream-derived file, plus one new unit-test file for previously-untested upstream
+code.
+
+### Upstream files edited directly, and why no override seam existed
+
+| File | What changed | Why |
+|---|---|---|
+| `.dockerignore` | Added `**/.cache` to the exclude list | A stale `packages/email/.cache/` tsbuildinfo directory on the host poisoned tsc's incremental build inside local `Dockerfile.kaneo` builds — it emitted only `.d.ts`, no `.js`, and the API container died at import time with `ERR_MODULE_NOT_FOUND` (L84). CI is unaffected (fresh checkouts carry no `.cache`); no seam exists for a build-context ignore file, so this is a direct one-line edit. |
+| `apps/web/nginx.kaneo.conf` | Added a `map $uri $anota_cache_control {...}` block at the top of the file (http context — conf.d files load there) and one server-level `add_header Cache-Control $anota_cache_control always;` next to the existing security headers | Content-hashed bundles under `/assets/` were served with **no** `Cache-Control` at all, so Chromium fell back to ~10% heuristic freshness and assets went stale within minutes of a fresh deploy (L85). `add_header` inside a `location` block discards the server-level security headers (lines 5-8 of this file), so the fix has to live at server level; the `map` gives per-URI values and an empty map value makes nginx omit the header entirely, which is what keeps proxied `/api/` responses untouched with zero extra logic. This is the fork's only nginx config — no seam to route around. |
+| `apps/web/.env.production` | Added a 5-line comment block directly above the `VITE_ANOTA_PANEL_URL` placeholder; no value changed | The `/panel`-suffix contract (the client appends `/message` and `/transcript` itself) was documented only in `use-anota-transcript.ts`'s header comment, not next to the placeholder a deploying human actually edits — a value one segment too deep produces a runtime 404 with no build-time warning (L18). Comment-only; `VITE_ANOTA_PANEL_URL="KANEO_ANOTA_PANEL_URL"` is unchanged, `env.sh` never reads this file so nothing downstream is affected. |
+| `apps/web/src/instrument.ts` | Removed `Sentry.replayIntegration()` and the two `replays*SampleRate` options from the `Sentry.init()` call; added a comment recording the decision | Upstream v2.21.0 bundled Session Replay by default; inert today only because `VITE_SENTRY_DSN` is the unsubstituted `KANEO_SENTRY_DSN` placeholder, so the first real DSN would silently start recording staff browser interaction on an internal shop tool (L23). Turning it off is now this fork's explicit, documented default rather than an accident of the SDK's own defaults — re-enabling it later is a decision to make at this comment, not a surprise. |
+| `apps/api/src/utils/get-workspace-invitation-email-copy.ts` | Added `es: esES.invitations.email` to `messages` and an `es`-prefix branch to the locale match | The helper served de/en/fr/pt/vi only; a user with a stored `es` locale silently got the English invitation email even though `i18n/es-ES.json`'s `invitations.email` block already exists and is fully Anota-branded (L95). Key parity with `en-US.json` confirmed before wiring it in: `jq '.invitations.email \| keys'` on both files returns the same 8 keys (`cta`, `footer`, `ignore`, `preview`, `sameEmail`, `subject`, `subtitle`, `title`). |
+| `apps/web/src/components/kanban-board/task-card.tsx:218` | `text-[10px] font-mono text-muted-foreground/90` → `text-[10px] font-mono text-muted-foreground` on the vehicle-ID label only | Measured 4.06:1 live in dark mode against the 4.5:1 AA floor for small text (L83). Full-alpha `--muted-foreground` re-measured against this fork's tokens (Tailwind neutral-500 `#737373` / neutral-950 `#0a0a0a`): dark `#818181` on the card `#191919` = **4.53:1**, on the dark page `#141414` = **4.73:1**; light `#686868` on white = **5.66:1** — all ≥ 4.5:1 AA. Only this one `/90` site was changed; the sibling `text-[10px]` sites the found-issues entry names (`task-card.tsx:240,271,278,301,348`, `task-labels.tsx:48`, `task-properties-sidebar.tsx:734`) were explicitly left alone — the entry itself notes only this one was measured. |
+| `tests/api/utils/get-invitation-email-subject.test.ts` | The "unsupported locale" fixture case (previously `es-ES`, asserting the English fallback) now asserts the new Spanish subject and is retitled; the fallback-path case was moved onto a genuinely-unsupported locale (`ja-JP`) | Direct, foreseeable consequence of the `es`-locale fix above: `getInvitationEmailSubject` wraps `getWorkspaceInvitationEmailCopy`, so `es-ES` now resolves to Spanish copy and the old English-fallback assertion would fail. Not a new/unrelated edit — same L95 fix, same commit. |
+
+**New file (no upstream counterpart, not Anota-namespaced — a plain unit test for previously-untested upstream code):** `tests/api/utils/get-workspace-invitation-email-copy.test.ts` — direct coverage of `getWorkspaceInvitationEmailCopy`'s locale-prefix matching (`es`, `es-ES`, `es-MX`, case-insensitivity, a genuinely-unsupported-locale fallback, and the no-locale fallback), following the existing `tests/api/utils/*.test.ts` convention (see `get-invitation-email-subject.test.ts` for the sibling pattern).
+
+### Local gate output
+
+`pnpm --filter @kaneo/web typecheck` — exit 0, silent (both `tsconfig.app.json` and `tsconfig.node.json` legs).
+`pnpm --filter @kaneo/api typecheck` — exit 0, silent.
+`pnpm --filter @kaneo/api test` — `Test Files 1 failed | 59 passed (60)`, `Tests 3 failed | 403 passed (406)`. The 3 failures are pre-existing and out of scope: `get-invitation-email-subject.test.ts`'s fr-FR/de-DE/pt-BR cases still assert `"... on Kaneo"` while `i18n/{fr-FR,de-DE,pt-BR}.json` already reads `"... on Anota"` — content unchanged by this branch, confirmed identical to `origin/main`.
+`pnpm --filter @kaneo/web test` — `Test Files 2 failed | 45 passed (47)`, `Tests 8 failed | 181 passed (189)`. All 8 failures are the two known-broken files (`src/hooks/use-board-sort.test.tsx`, `src/hooks/use-task-filters-with-labels-support.test.tsx`, both `TypeError: Cannot read properties of undefined (reading 'clear')` on `window.localStorage`), being fixed in a separate worktree — no other failures.
+`pnpm exec biome check` on all 5 changed src/test files (`get-workspace-invitation-email-copy.ts`, `task-card.tsx`, `instrument.ts`, `get-invitation-email-subject.test.ts`, `get-workspace-invitation-email-copy.test.ts`) — `Checked 5 files in 31ms. No fixes applied.`
+`pnpm i18n:check` — exit 1, pre-existing and out of scope: 16 locales (`es-ES` included) are missing the same `common:error.*` keys and carry the same `_few`/`_many` plural-form extras; unrelated to the `invitations.email` block this fix touched, which has full 8/8 key parity with `en-US.json`. Zero `i18n/*.json` files were changed on this branch (`git diff --stat origin/main..HEAD -- i18n/` is empty).
+
+nginx `/assets/` vs `index.html` Cache-Control verification (`nginx:alpine` via `docker run --rm -d -p 18080:5173`, the fork's `nginx.kaneo.conf` mounted read-only over a scratch `html/index.html` + `html/assets/app-abc123.js`; `nginx -t` inside the container: `syntax is ok` / `test is successful`):
+
+- `GET /assets/app-abc123.js` → `Cache-Control: public, max-age=31536000, immutable`
+- `GET /` → `Cache-Control: no-cache`
+- `GET /index.html` → `Cache-Control: no-cache`
+- `GET /dashboard/foo` (SPA fallback via `try_files`) → `Cache-Control: no-cache`
+- `GET /api/x` (proxied; 502 with no upstream running) → no `Cache-Control` header present at all
+- All five responses carried all four existing security headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `X-XSS-Protection: 0`, `Referrer-Policy: strict-origin-when-cross-origin`), confirming the server-level `add_header` placement didn't break their inheritance into any location block. Container stopped after verification.
