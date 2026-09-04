@@ -215,7 +215,7 @@ function TaskCard({ task, disableDragDrop = false }: TaskCardProps) {
             )}
 
             {showTaskNumbers && (
-              <div className="mb-2 text-[10px] font-mono text-muted-foreground/90">
+              <div className="mb-2 text-[10px] font-mono text-muted-foreground">
                 {project?.slug}-{task.number}
               </div>
             )}

@@ -14,7 +14,7 @@ describe("getInvitationEmailSubject", () => {
     );
 
     expect(subject).toBe(
-      "Alice vous invite à rejoindre Équipe produit sur Kaneo",
+      "Alice vous invite à rejoindre Équipe produit sur Anota",
     );
   });
 
@@ -30,7 +30,7 @@ describe("getInvitationEmailSubject", () => {
     );
 
     expect(subject).toBe(
-      "Alice hat dich eingeladen, Produkt auf Kaneo beizutreten",
+      "Alice hat dich eingeladen, Produkt auf Anota beizutreten",
     );
   });
 
@@ -46,11 +46,17 @@ describe("getInvitationEmailSubject", () => {
     );
 
     expect(subject).toBe(
-      "Alice convidou você para participar de Equipe produto no Kaneo",
+      "Alice convidou você para participar de Equipe produto no Anota",
     );
   });
 
-  it("uses the English fallback for unsupported locales", () => {
+  it("uses Spanish copy for regional Spanish locales", () => {
+    // docs/found-issues.md:L95 — es-ES used to fall through to the English
+    // fallback here (get-workspace-invitation-email-copy only served
+    // de/en/fr/pt/vi); es is now a supported prefix, so this fixture
+    // resolves to the Spanish copy instead. See
+    // tests/api/utils/get-workspace-invitation-email-copy.test.ts for
+    // direct coverage of the locale-prefix matching itself.
     const locale = "es-ES";
     const inviterName = "Alice";
     const workspaceName = "Producto";
@@ -61,14 +67,25 @@ describe("getInvitationEmailSubject", () => {
       workspaceName,
     );
 
+    expect(subject).toBe("Alice te ha invitado a unirte a Producto en Anota");
+  });
+
+  it("uses the English fallback for genuinely unsupported locales", () => {
+    const locale = "ja-JP";
+    const inviterName = "Alice";
+    const workspaceName = "Producto";
+
+    const subject = getInvitationEmailSubject(
+      locale,
+      inviterName,
+      workspaceName,
+    );
+
     // docs/found-issues.md:L55 — en-US.json's invitations.email.subject was
-    // rebranded to "Anota" (02.1-02); this fallback-locale fixture (es-ES
-    // isn't a supported prefix in get-workspace-invitation-email-copy, so
-    // it resolves to the English copy) was never updated to match. The
-    // fr-FR/de-DE/pt-BR cases above are unaffected: those locales are
-    // deliberately unreachable in this deployment's browser set (see
-    // docs/fork-notes.md's "Locale scope decision") and their own JSON
-    // files were never rebranded, so they still correctly expect "Kaneo".
+    // rebranded to "Anota" (02.1-02); the fr-FR/de-DE/pt-BR/vi-VN blocks
+    // followed in Phase 07 Plan 08 (fork-notes § INVITE-01) and es-ES in the
+    // 2026-09-03 found-issues sweep, so every reachable locale above expects
+    // "Anota" too.
     expect(subject).toBe("Alice invited you to join Producto on Anota");
   });
 });
