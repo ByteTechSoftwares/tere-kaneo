@@ -14,7 +14,7 @@ describe("getInvitationEmailSubject", () => {
     );
 
     expect(subject).toBe(
-      "Alice vous invite à rejoindre Équipe produit sur Kaneo",
+      "Alice vous invite à rejoindre Équipe produit sur Anota",
     );
   });
 
@@ -30,7 +30,7 @@ describe("getInvitationEmailSubject", () => {
     );
 
     expect(subject).toBe(
-      "Alice hat dich eingeladen, Produkt auf Kaneo beizutreten",
+      "Alice hat dich eingeladen, Produkt auf Anota beizutreten",
     );
   });
 
@@ -46,7 +46,7 @@ describe("getInvitationEmailSubject", () => {
     );
 
     expect(subject).toBe(
-      "Alice convidou você para participar de Equipe produto no Kaneo",
+      "Alice convidou você para participar de Equipe produto no Anota",
     );
   });
 
@@ -82,11 +82,10 @@ describe("getInvitationEmailSubject", () => {
     );
 
     // docs/found-issues.md:L55 — en-US.json's invitations.email.subject was
-    // rebranded to "Anota" (02.1-02). The fr-FR/de-DE/pt-BR cases above are
-    // unaffected: those locales are deliberately unreachable in this
-    // deployment's browser set (see docs/fork-notes.md's "Locale scope
-    // decision") and their own JSON files were never rebranded, so they
-    // still correctly expect "Kaneo".
+    // rebranded to "Anota" (02.1-02); the fr-FR/de-DE/pt-BR/vi-VN blocks
+    // followed in Phase 07 Plan 08 (fork-notes § INVITE-01) and es-ES in the
+    // 2026-09-03 found-issues sweep, so every reachable locale above expects
+    // "Anota" too.
     expect(subject).toBe("Alice invited you to join Producto on Anota");
   });
 });
