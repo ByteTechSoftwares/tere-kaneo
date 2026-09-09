@@ -467,6 +467,8 @@ export function AnotaPhoneCell({
               </Label>
               <Input
                 id={inputId}
+                type="tel"
+                autoComplete="tel"
                 autoFocus
                 value={inputValue}
                 onChange={(event) => {
