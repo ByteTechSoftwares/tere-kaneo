@@ -2102,7 +2102,8 @@
 				"name": "Name",
 				"role": "Role",
 				"joined": "Joined",
-				"actions": "Actions"
+				"actions": "Actions",
+				"phone": "Phone"
 			},
 			"memberRolePending": "{{role}} (Pending)",
 			"ariaCancelInvitation": "Cancel invitation",
@@ -2119,7 +2120,31 @@
 			"cancelInviteSuccess": "Invitation cancelled successfully",
 			"cancelInviteError": "Failed to cancel invitation",
 			"roleUpdateSuccess": "Role updated",
-			"roleUpdateError": "Failed to update role"
+			"roleUpdateError": "Failed to update role",
+			"phone": {
+				"ariaEdit": "Edit phone number for {{name}}",
+				"addNumber": "Add number",
+				"editTitle": "Edit phone number",
+				"addTitle": "Add phone number",
+				"description": "This number receives Anota texts for {{name}}.",
+				"fieldLabel": "Phone number",
+				"fieldPlaceholder": "+1 954 555 0100",
+				"fieldHelper": "Enter the number they text and receive Anota messages on.",
+				"consentLabel": "Signed SMS consent form on file",
+				"consentHelper": "Required before this number can go live.",
+				"saveNumber": "Save number",
+				"clearNumber": "Clear number",
+				"emptyStateHeading": "No number on file",
+				"emptyStateBody": "Add this person's number once their consent form is signed.",
+				"errorConsentRequired": "Check the consent box to save this number.",
+				"errorClaimed": "That number is already assigned to another team member. Confirm the number and try again.",
+				"errorForbidden": "You don't have permission to edit phone numbers.",
+				"errorNetwork": "Couldn't save — check your connection and try again.",
+				"saveSuccessToast": "Phone number saved",
+				"clearSuccessToast": "Phone number cleared",
+				"clearConfirmTitle": "Clear phone number?",
+				"clearConfirmDescription": "{{name}} will stop receiving texts from Anota until a number is added again."
+			}
 		}
 	},
 	"publicProject": {

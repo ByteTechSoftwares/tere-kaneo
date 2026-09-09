@@ -56,7 +56,30 @@
 			"troubleshooting": "Passos para solução de problemas:",
 			"tryAgain": "Tentar novamente",
 			"viewDeploymentGuide": "Ver guia de implantação",
-			"refreshPage": "Atualizar página"
+			"refreshPage": "Atualizar página",
+			"description": "The page crashed unexpectedly. Refreshing usually fixes it.",
+			"messages": {
+				"auth": "Authentication failed. Please sign in again.",
+				"cors": "Unable to connect to the server. This might be due to CORS configuration issues.",
+				"network": "Network error. Please check your internet connection and try again.",
+				"server": "Server error. Please try again later.",
+				"unknown": "An unexpected error occurred."
+			},
+			"troubleshootingSteps": {
+				"cors": {
+					"checkAccessibility": "Check that your API server is accessible from your browser",
+					"checkApiRunning": "Make sure your API server is running",
+					"checkApiUrl": "Check that VITE_API_URL in your frontend .env matches your API server URL",
+					"checkProtocol": "Ensure both frontend and API are using the same protocol (http/https)",
+					"verifyCorsOrigins": "Verify CORS_ORIGINS in your API .env includes your frontend URL"
+				},
+				"network": {
+					"checkConnection": "Check your internet connection",
+					"checkFirewall": "Check if there are any firewall or proxy issues",
+					"tryRefresh": "Try refreshing the page",
+					"verifyApiRunning": "Verify the API server is running and accessible"
+				}
+			}
 		},
 		"formats": {
 			"never": "Nunca"
@@ -2079,7 +2102,8 @@
 				"name": "Nome",
 				"role": "Função",
 				"joined": "Entrou em",
-				"actions": "Ações"
+				"actions": "Ações",
+				"phone": "Telefone"
 			},
 			"memberRolePending": "{{role}} (Pendente)",
 			"ariaCancelInvitation": "Cancelar convite",
@@ -2096,7 +2120,31 @@
 			"cancelInviteSuccess": "Convite cancelado com sucesso",
 			"cancelInviteError": "Falha ao cancelar convite",
 			"roleUpdateSuccess": "Função atualizada",
-			"roleUpdateError": "Falha ao atualizar função"
+			"roleUpdateError": "Falha ao atualizar função",
+			"phone": {
+				"ariaEdit": "Editar número de telefone de {{name}}",
+				"addNumber": "Adicionar número",
+				"editTitle": "Editar número de telefone",
+				"addTitle": "Adicionar número de telefone",
+				"description": "Este número recebe mensagens da Anota para {{name}}.",
+				"fieldLabel": "Número de telefone",
+				"fieldPlaceholder": "+1 954 555 0100",
+				"fieldHelper": "Digite o número pelo qual essa pessoa envia e recebe mensagens da Anota.",
+				"consentLabel": "Termo de consentimento de SMS assinado arquivado",
+				"consentHelper": "Obrigatório antes que este número possa entrar em uso.",
+				"saveNumber": "Salvar número",
+				"clearNumber": "Remover número",
+				"emptyStateHeading": "Nenhum número cadastrado",
+				"emptyStateBody": "Adicione o número desta pessoa assim que o termo de consentimento for assinado.",
+				"errorConsentRequired": "Marque o termo de consentimento para salvar este número.",
+				"errorClaimed": "Esse número já está atribuído a outro membro da equipe. Confira o número e tente novamente.",
+				"errorForbidden": "Você não tem permissão para editar números de telefone.",
+				"errorNetwork": "Não foi possível salvar — verifique sua conexão e tente novamente.",
+				"saveSuccessToast": "Número de telefone salvo",
+				"clearSuccessToast": "Número de telefone removido",
+				"clearConfirmTitle": "Remover número de telefone?",
+				"clearConfirmDescription": "{{name}} deixará de receber mensagens da Anota até que um número seja adicionado novamente."
+			}
 		}
 	},
 	"publicProject": {
