@@ -528,7 +528,7 @@ upstream file below gets exactly one minimal, documented mount point.
 
 | File | What changed | Why a direct edit (no seam) |
 |---|---|---|
-| `apps/web/src/components/team/members-table.tsx` | One import; the top-level render fragment `<>`/`</>` swapped for `<AnotaPhoneProvider>`/`</AnotaPhoneProvider>` (same nesting depth, no new wrapper); one new `<TableHead>` ("Phone", between Role and Joined) with a one-line mount-point comment; one new `<TableCell>` per row rendering `<AnotaPhoneCell userId isSelf canEdit name />` (also between Role and Joined) | This is the members table itself — there is no injection point upstream offers for adding a column, so the column header/cell pair is a direct edit. No `fetch(` or `useState` was introduced in this file; all data loading and mutation stay inside `anota-phone-cell.tsx`. Measured diff: **20 added lines** (`git diff main...HEAD -- apps/web/src/components/team/members-table.tsx \| rg -c '^\+[^+]'`), over the plan's 12-line budget — see `10-01-SUMMARY.md` "Deviations" for the line-by-line accounting and why 12 was an undercount of the plan's own required elements (import, provider-tag swap ×2, TableHead ×3, TableCell ×8). On merge: keep the import + provider wrap + column pair; if upstream ever adds its own column between Role and Joined, re-anchor the phone column relative to whichever upstream column moved. |
+| `apps/web/src/components/team/members-table.tsx` | One `@/`-aliased import; the top-level render fragment `<>`/`</>` swapped for `<AnotaPhoneProvider>`/`</AnotaPhoneProvider>` (same nesting depth, no new wrapper); one new `<TableHead>` ("Phone", between Role and Joined) with a one-line mount-point comment; one new `<TableCell>` per row rendering `<AnotaPhoneCell userId isSelf canEdit name />` (also between Role and Joined) | This is the members table itself — there is no injection point upstream offers for adding a column, so the column header/cell pair is a direct edit. No `fetch(` or `useState` was introduced in this file; all data loading and mutation stay inside `anota-phone-cell.tsx`. Measured diff: **15 added lines** (`git diff main -- apps/web/src/components/team/members-table.tsx \| rg -c '^\+[^+]'`, working tree vs `main` so it includes both plan commits), over the plan's 12-line budget: import (1) + provider-tag swap (2, one line each) + mount-point comment (1) + TableHead (3) + TableCell (8) = 15. The 12-line budget was an undercount of the plan's own required elements once biome wraps the 4-prop `AnotaPhoneCell` call — see `10-01-SUMMARY.md` "Deviations". On merge: keep the import + provider wrap + column pair; if upstream ever adds its own column between Role and Joined, re-anchor the phone column relative to whichever upstream column moved. |
 
 ### `name` prop — one addition beyond the plan's literal 3-prop mount description
 
@@ -559,11 +559,13 @@ and asserts the PUT body carries the normalized value.
 member's masked number; non-admin sees only their own masked, read-only row; save issues
 exactly one PUT with the E.164-normalized number; a 409 shows the claimed-number copy and
 keeps the dialog open; Save stays disabled until consent is checked). `pnpm exec biome check
-src` (from `apps/web`) — `Checked 604 files in 84ms. No fixes applied.` clean. `pnpm
-i18n:check` — exit 1, **pre-existing and out of scope**: ru-RU/uk-UA carry `_few`/`_many`
-plural-form "Extra keys" not present in `en-US.json`'s schema (already tracked in shop-ops
-`docs/found-issues.md`, 2026-09-03 entry); confirmed via a plain-git-worktree comparison
-against `origin/main` with zero phone-cell changes present, identical failure. Zero
-`i18n/*.json` files were left with missing phone-related keys: `en-US.json` and `pt-BR.json`
-hand-translated, the other 15 non-English locales seeded via `pnpm i18n:check:fix` (English
-fallback text, expected/documented behaviour for this fork's i18n workflow).
+src` (from `apps/web`) — `Checked 604 files in 12ms. Fixed 1 file.` after the mount-point
+compaction, clean on re-run. `pnpm i18n:check` — exit 1, **pre-existing and out of scope**:
+ru-RU/uk-UA carry `_few`/`_many` plural-form "Extra keys" not present in `en-US.json`'s
+schema — the identical failure this repo's "Found-issues sweep 2026-09-03" section above
+already records (`pnpm i18n:check` — exit 1, pre-existing and out of scope: 16 locales …
+carry the same `_few`/`_many` plural-form extras), unrelated to the `phone.*` keys this plan
+added (those have full key parity across all 18 locale files). Zero `i18n/*.json` files were
+left with missing phone-related keys: `en-US.json` and `pt-BR.json` hand-translated, the
+other 15 non-English locales seeded via `pnpm i18n:check:fix` (English fallback text,
+expected/documented behaviour for this fork's i18n workflow).
