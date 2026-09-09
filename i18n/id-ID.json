@@ -56,7 +56,30 @@
 			"troubleshooting": "Langkah pemecahan masalah:",
 			"tryAgain": "Coba lagi",
 			"viewDeploymentGuide": "Lihat panduan deployment",
-			"refreshPage": "Muat ulang halaman"
+			"refreshPage": "Muat ulang halaman",
+			"description": "The page crashed unexpectedly. Refreshing usually fixes it.",
+			"messages": {
+				"auth": "Authentication failed. Please sign in again.",
+				"cors": "Unable to connect to the server. This might be due to CORS configuration issues.",
+				"network": "Network error. Please check your internet connection and try again.",
+				"server": "Server error. Please try again later.",
+				"unknown": "An unexpected error occurred."
+			},
+			"troubleshootingSteps": {
+				"cors": {
+					"checkAccessibility": "Check that your API server is accessible from your browser",
+					"checkApiRunning": "Make sure your API server is running",
+					"checkApiUrl": "Check that VITE_API_URL in your frontend .env matches your API server URL",
+					"checkProtocol": "Ensure both frontend and API are using the same protocol (http/https)",
+					"verifyCorsOrigins": "Verify CORS_ORIGINS in your API .env includes your frontend URL"
+				},
+				"network": {
+					"checkConnection": "Check your internet connection",
+					"checkFirewall": "Check if there are any firewall or proxy issues",
+					"tryRefresh": "Try refreshing the page",
+					"verifyApiRunning": "Verify the API server is running and accessible"
+				}
+			}
 		},
 		"formats": {
 			"never": "Tidak pernah"
@@ -2079,7 +2102,8 @@
 				"name": "Nama",
 				"role": "Peran",
 				"joined": "Bergabung",
-				"actions": "Aksi"
+				"actions": "Aksi",
+				"phone": "Phone"
 			},
 			"memberRolePending": "{{role}} (Tertunda)",
 			"ariaCancelInvitation": "Batalkan undangan",
@@ -2096,7 +2120,31 @@
 			"cancelInviteError": "Gagal membatalkan undangan",
 			"roleUpdateSuccess": "Peran diperbarui",
 			"roleUpdateError": "Gagal memperbarui peran",
-			"ariaInvitationActions": "Tindakan undangan"
+			"ariaInvitationActions": "Tindakan undangan",
+			"phone": {
+				"addNumber": "Add number",
+				"addTitle": "Add phone number",
+				"ariaEdit": "Edit phone number for {{name}}",
+				"clearConfirmDescription": "{{name}} will stop receiving texts from Anota until a number is added again.",
+				"clearConfirmTitle": "Clear phone number?",
+				"clearNumber": "Clear number",
+				"clearSuccessToast": "Phone number cleared",
+				"consentHelper": "Required before this number can go live.",
+				"consentLabel": "Signed SMS consent form on file",
+				"description": "This number receives Anota texts for {{name}}.",
+				"editTitle": "Edit phone number",
+				"emptyStateBody": "Add this person's number once their consent form is signed.",
+				"emptyStateHeading": "No number on file",
+				"errorClaimed": "That number is already assigned to another team member. Confirm the number and try again.",
+				"errorConsentRequired": "Check the consent box to save this number.",
+				"errorForbidden": "You don't have permission to edit phone numbers.",
+				"errorNetwork": "Couldn't save — check your connection and try again.",
+				"fieldHelper": "Enter the number they text and receive Anota messages on.",
+				"fieldLabel": "Phone number",
+				"fieldPlaceholder": "+1 954 555 0100",
+				"saveNumber": "Save number",
+				"saveSuccessToast": "Phone number saved"
+			}
 		}
 	},
 	"publicProject": {

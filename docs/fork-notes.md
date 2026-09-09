@@ -517,3 +517,55 @@ nginx `/assets/` vs `index.html` Cache-Control verification (`nginx:alpine` via 
 - `GET /dashboard/foo` (SPA fallback via `try_files`) → `Cache-Control: no-cache`
 - `GET /api/x` (proxied; 502 with no upstream running) → no `Cache-Control` header present at all
 - All five responses carried all four existing security headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `X-XSS-Protection: 0`, `Referrer-Policy: strict-origin-when-cross-origin`), confirming the server-level `add_header` placement didn't break their inheritance into any location block. Container stopped after verification.
+
+## Phase 10 Plan 01 — Members-page phone cell + edit dialog (ONBOARD-10)
+
+Branch: `feat/anota-member-phone-cell`. All UI logic lives in the new Anota-namespaced
+`apps/web/src/anota/anota-phone-cell.tsx` (`AnotaPhoneCell` + `AnotaPhoneProvider`); the
+upstream file below gets exactly one minimal, documented mount point.
+
+### Upstream files edited directly, and why no override seam existed
+
+| File | What changed | Why a direct edit (no seam) |
+|---|---|---|
+| `apps/web/src/components/team/members-table.tsx` | One `@/`-aliased import; the top-level render fragment `<>`/`</>` swapped for `<AnotaPhoneProvider>`/`</AnotaPhoneProvider>` (same nesting depth, no new wrapper); one new `<TableHead>` ("Phone", between Role and Joined) with a one-line mount-point comment; one new `<TableCell>` per row rendering `<AnotaPhoneCell userId isSelf canEdit name />` (also between Role and Joined) | This is the members table itself — there is no injection point upstream offers for adding a column, so the column header/cell pair is a direct edit. No `fetch(` or `useState` was introduced in this file; all data loading and mutation stay inside `anota-phone-cell.tsx`. Measured diff: **15 added lines** (`git diff main -- apps/web/src/components/team/members-table.tsx \| rg -c '^\+[^+]'`, working tree vs `main` so it includes both plan commits), over the plan's 12-line budget: import (1) + provider-tag swap (2, one line each) + mount-point comment (1) + TableHead (3) + TableCell (8) = 15. The 12-line budget was an undercount of the plan's own required elements once biome wraps the 4-prop `AnotaPhoneCell` call — see `10-01-SUMMARY.md` "Deviations". On merge: keep the import + provider wrap + column pair; if upstream ever adds its own column between Role and Joined, re-anchor the phone column relative to whichever upstream column moved. |
+
+### `name` prop — one addition beyond the plan's literal 3-prop mount description
+
+The plan describes the mount as `<AnotaPhoneCell userId isSelf canEdit />` (3 props). The
+UI-SPEC's copy contract needs `{{name}}` interpolation (aria-label, dialog description,
+clear-confirmation copy) that the read wire contract (shared verbatim with plan 10-03) does
+not carry — it returns `kaneoUserId`/`phone` only, no name. `members-table.tsx` already
+computes `member.user.name` at the row for its own avatar/initials rendering, so passing
+`name={member.user.name ?? member.user.email}` is a zero-fetch, zero-architecture addition
+sourced from data the row already has. Documented here and in `10-01-SUMMARY.md` rather than
+escalated — no new data source, no new request, no schema change.
+
+### Bug fixed in the same file during Task 2 (not a plan task, found while writing tests)
+
+`toE164()`'s `+`-prefixed branch returned the trimmed input unchanged instead of stripping
+non-digit characters — so typing the phone field's own placeholder-suggested format
+(`"+1 954 555 0100"`, spaces included) would PUT a spaced, non-E.164 string to the wire
+contract. Fixed to strip everything but digits after the leading `+` and validate length
+(10–15 digits), matching the digit-stripping the non-`+` branch already did. Covered by
+`anota-phone-cell.test.tsx`'s save-PUT test, which types the exact spaced placeholder format
+and asserts the PUT body carries the normalized value.
+
+### Local gate output
+
+`pnpm --filter @kaneo/web typecheck` — exit 0, silent (both `tsconfig.app.json` and
+`tsconfig.node.json` legs). `pnpm --filter @kaneo/web test` — `Test Files 48 passed (48)`,
+`Tests 194 passed (194)` (5 new tests in `anota-phone-cell.test.tsx`: admin sees every
+member's masked number; non-admin sees only their own masked, read-only row; save issues
+exactly one PUT with the E.164-normalized number; a 409 shows the claimed-number copy and
+keeps the dialog open; Save stays disabled until consent is checked). `pnpm exec biome check
+src` (from `apps/web`) — `Checked 604 files in 12ms. Fixed 1 file.` after the mount-point
+compaction, clean on re-run. `pnpm i18n:check` — exit 1, **pre-existing and out of scope**:
+ru-RU/uk-UA carry `_few`/`_many` plural-form "Extra keys" not present in `en-US.json`'s
+schema — the identical failure this repo's "Found-issues sweep 2026-09-03" section above
+already records (`pnpm i18n:check` — exit 1, pre-existing and out of scope: 16 locales …
+carry the same `_few`/`_many` plural-form extras), unrelated to the `phone.*` keys this plan
+added (those have full key parity across all 18 locale files). Zero `i18n/*.json` files were
+left with missing phone-related keys: `en-US.json` and `pt-BR.json` hand-translated, the
+other 15 non-English locales seeded via `pnpm i18n:check:fix` (English fallback text,
+expected/documented behaviour for this fork's i18n workflow).

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AnotaPhoneCell, AnotaPhoneProvider } from "@/anota/anota-phone-cell";
 import useCancelInvitation from "@/hooks/mutations/workspace-user/use-cancel-invitation";
 import useDeleteWorkspaceUser from "@/hooks/mutations/workspace-user/use-delete-workspace-user";
 import useUpdateWorkspaceUserRole from "@/hooks/mutations/workspace-user/use-update-workspace-user-role";
@@ -182,7 +183,7 @@ function MembersTable({ workspaceId, invitations, users }: Props) {
   };
 
   return (
-    <>
+    <AnotaPhoneProvider>
       <Table>
         <TableHeader>
           <TableRow>
@@ -193,6 +194,10 @@ function MembersTable({ workspaceId, invitations, users }: Props) {
             </TableHead>
             <TableHead className="text-foreground font-medium">
               {t("team:membersTable.columns.role", { defaultValue: "Role" })}
+            </TableHead>
+            {/* Anota mount point (ONBOARD-10, D-25) — see @/anota/anota-phone-cell.tsx */}
+            <TableHead className="text-foreground font-medium">
+              {t("team:membersTable.columns.phone", { defaultValue: "Phone" })}
             </TableHead>
             <TableHead className="text-foreground font-medium">
               {t("team:membersTable.columns.joined", {
@@ -288,6 +293,14 @@ function MembersTable({ workspaceId, invitations, users }: Props) {
                       })}
                     </Badge>
                   )}
+                </TableCell>
+                <TableCell className="py-3">
+                  <AnotaPhoneCell
+                    userId={member.userId}
+                    isSelf={isSelf}
+                    canEdit={canChangeRoles}
+                    name={member.user.name ?? member.user.email}
+                  />
                 </TableCell>
                 <TableCell className="py-3 text-sm text-muted-foreground tabular-nums">
                   {member.createdAt ? formatDateMedium(member.createdAt) : "–"}
@@ -497,7 +510,7 @@ function MembersTable({ workspaceId, invitations, users }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </AnotaPhoneProvider>
   );
 }
 

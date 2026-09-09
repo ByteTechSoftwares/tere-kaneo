@@ -56,7 +56,30 @@
 			"troubleshooting": "Кроки для усунення проблеми:",
 			"tryAgain": "Спробувати ще раз",
 			"viewDeploymentGuide": "Переглянути інструкцію з розгортання",
-			"refreshPage": "Оновити сторінку"
+			"refreshPage": "Оновити сторінку",
+			"description": "The page crashed unexpectedly. Refreshing usually fixes it.",
+			"messages": {
+				"auth": "Authentication failed. Please sign in again.",
+				"cors": "Unable to connect to the server. This might be due to CORS configuration issues.",
+				"network": "Network error. Please check your internet connection and try again.",
+				"server": "Server error. Please try again later.",
+				"unknown": "An unexpected error occurred."
+			},
+			"troubleshootingSteps": {
+				"cors": {
+					"checkAccessibility": "Check that your API server is accessible from your browser",
+					"checkApiRunning": "Make sure your API server is running",
+					"checkApiUrl": "Check that VITE_API_URL in your frontend .env matches your API server URL",
+					"checkProtocol": "Ensure both frontend and API are using the same protocol (http/https)",
+					"verifyCorsOrigins": "Verify CORS_ORIGINS in your API .env includes your frontend URL"
+				},
+				"network": {
+					"checkConnection": "Check your internet connection",
+					"checkFirewall": "Check if there are any firewall or proxy issues",
+					"tryRefresh": "Try refreshing the page",
+					"verifyApiRunning": "Verify the API server is running and accessible"
+				}
+			}
 		},
 		"formats": {
 			"never": "Ніколи"
@@ -2093,7 +2116,8 @@
 				"name": "Ім'я",
 				"role": "Роль",
 				"joined": "Приєднався",
-				"actions": "Дії"
+				"actions": "Дії",
+				"phone": "Phone"
 			},
 			"memberRolePending": "{{role}} (Очікує)",
 			"ariaCancelInvitation": "Скасувати запрошення",
@@ -2110,7 +2134,31 @@
 			"cancelInviteError": "Не вдалося скасувати запрошення",
 			"ariaInvitationActions": "Дії із запрошенням",
 			"roleUpdateSuccess": "Роль оновлено",
-			"roleUpdateError": "Не вдалося оновити роль"
+			"roleUpdateError": "Не вдалося оновити роль",
+			"phone": {
+				"addNumber": "Add number",
+				"addTitle": "Add phone number",
+				"ariaEdit": "Edit phone number for {{name}}",
+				"clearConfirmDescription": "{{name}} will stop receiving texts from Anota until a number is added again.",
+				"clearConfirmTitle": "Clear phone number?",
+				"clearNumber": "Clear number",
+				"clearSuccessToast": "Phone number cleared",
+				"consentHelper": "Required before this number can go live.",
+				"consentLabel": "Signed SMS consent form on file",
+				"description": "This number receives Anota texts for {{name}}.",
+				"editTitle": "Edit phone number",
+				"emptyStateBody": "Add this person's number once their consent form is signed.",
+				"emptyStateHeading": "No number on file",
+				"errorClaimed": "That number is already assigned to another team member. Confirm the number and try again.",
+				"errorConsentRequired": "Check the consent box to save this number.",
+				"errorForbidden": "You don't have permission to edit phone numbers.",
+				"errorNetwork": "Couldn't save — check your connection and try again.",
+				"fieldHelper": "Enter the number they text and receive Anota messages on.",
+				"fieldLabel": "Phone number",
+				"fieldPlaceholder": "+1 954 555 0100",
+				"saveNumber": "Save number",
+				"saveSuccessToast": "Phone number saved"
+			}
 		}
 	},
 	"publicProject": {
