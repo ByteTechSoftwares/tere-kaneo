@@ -22,6 +22,10 @@ import type {
   WorkspaceUser,
   WorkspaceUserInvitation,
 } from "@/types/workspace-user";
+import {
+  AnotaPhoneCell,
+  AnotaPhoneProvider,
+} from "../../anota/anota-phone-cell";
 import { useAuth } from "../providers/auth-provider/hooks/use-auth";
 import {
   AlertDialog,
@@ -182,7 +186,7 @@ function MembersTable({ workspaceId, invitations, users }: Props) {
   };
 
   return (
-    <>
+    <AnotaPhoneProvider>
       <Table>
         <TableHeader>
           <TableRow>
@@ -193,6 +197,12 @@ function MembersTable({ workspaceId, invitations, users }: Props) {
             </TableHead>
             <TableHead className="text-foreground font-medium">
               {t("team:membersTable.columns.role", { defaultValue: "Role" })}
+            </TableHead>
+            {/* Anota mount point (ONBOARD-10, D-25) — see ../../anota/anota-phone-cell.tsx */}
+            <TableHead className="text-foreground font-medium">
+              {t("team:membersTable.columns.phone", {
+                defaultValue: "Phone",
+              })}
             </TableHead>
             <TableHead className="text-foreground font-medium">
               {t("team:membersTable.columns.joined", {
@@ -288,6 +298,14 @@ function MembersTable({ workspaceId, invitations, users }: Props) {
                       })}
                     </Badge>
                   )}
+                </TableCell>
+                <TableCell className="py-3">
+                  <AnotaPhoneCell
+                    userId={member.userId}
+                    isSelf={isSelf}
+                    canEdit={canChangeRoles}
+                    name={member.user.name ?? member.user.email}
+                  />
                 </TableCell>
                 <TableCell className="py-3 text-sm text-muted-foreground tabular-nums">
                   {member.createdAt ? formatDateMedium(member.createdAt) : "–"}
@@ -497,7 +515,7 @@ function MembersTable({ workspaceId, invitations, users }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </AnotaPhoneProvider>
   );
 }
 

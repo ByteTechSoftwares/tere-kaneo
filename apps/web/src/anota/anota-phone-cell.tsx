@@ -58,9 +58,12 @@ import { useAnotaSession } from "./use-anota-session";
 // documented prior footgun: use-anota-transcript.ts:31-45). This file
 // appends its own `/members` and `/members/phone` sub-paths and never
 // re-includes `/panel`.
-const PANEL_BASE_URL = import.meta.env.VITE_ANOTA_PANEL_URL as
-  | string
-  | undefined;
+// Read lazily (not as a module-level const) so vitest's per-test
+// `vi.stubEnv` works without `vi.resetModules()` — same convention as
+// `@/fetchers/get-api-url` / `resolve-avatar-src.ts`.
+function getPanelBaseUrl(): string | undefined {
+  return import.meta.env.VITE_ANOTA_PANEL_URL as string | undefined;
+}
 
 // ---------------------------------------------------------------------
 // E.164 normalisation (client-side only, deliberately NOT shared with
@@ -72,7 +75,14 @@ const PANEL_BASE_URL = import.meta.env.VITE_ANOTA_PANEL_URL as
 // ---------------------------------------------------------------------
 function toE164(rawNumber: string): string | null {
   const trimmed = rawNumber.trim();
-  if (trimmed.startsWith("+")) return trimmed;
+  if (trimmed.startsWith("+")) {
+    // Strip everything but digits after the leading `+` — the field's own
+    // placeholder ("+1 954 555 0100") suggests a spaced format, so a
+    // user typing exactly that must still normalize to valid E.164
+    // (no spaces) rather than round-tripping the raw spaced string.
+    const digits = trimmed.slice(1).replace(/\D/g, "");
+    return digits.length >= 10 && digits.length <= 15 ? `+${digits}` : null;
+  }
   const digits = trimmed.replace(/\D/g, "");
   if (digits.length === 10) return `+1${digits}`;
   if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
@@ -121,7 +131,8 @@ export function AnotaPhoneProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   const load = useCallback(async () => {
-    if (!PANEL_BASE_URL) {
+    const panelBaseUrl = getPanelBaseUrl();
+    if (!panelBaseUrl) {
       setState("error");
       return;
     }
@@ -132,7 +143,7 @@ export function AnotaPhoneProvider({ children }: { children: ReactNode }) {
         setState("error");
         return;
       }
-      const response = await fetch(`${PANEL_BASE_URL}/members`, {
+      const response = await fetch(`${panelBaseUrl}/members`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
@@ -225,7 +236,7 @@ export function AnotaPhoneCell({
     async (nextPhone: string | null) => {
       const token = await getBearerToken();
       if (!token) return { ok: false, status: 0 } as const;
-      const response = await fetch(`${PANEL_BASE_URL}/members/phone`, {
+      const response = await fetch(`${getPanelBaseUrl()}/members/phone`, {
         method: "PUT",
         headers: {
           "content-type": "application/json",
@@ -253,7 +264,7 @@ export function AnotaPhoneCell({
       setSaveError(null);
       setIsSaving(true);
       try {
-        if (!PANEL_BASE_URL) {
+        if (!getPanelBaseUrl()) {
           toast.error(
             t("team:membersTable.phone.errorNetwork", {
               defaultValue:
@@ -308,7 +319,7 @@ export function AnotaPhoneCell({
   const handleClear = useCallback(async () => {
     setIsClearing(true);
     try {
-      if (!PANEL_BASE_URL) {
+      if (!getPanelBaseUrl()) {
         toast.error(
           t("team:membersTable.phone.errorNetwork", {
             defaultValue:
