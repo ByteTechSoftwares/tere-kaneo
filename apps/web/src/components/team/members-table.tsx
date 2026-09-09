@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AnotaPhoneCell, AnotaPhoneProvider } from "@/anota/anota-phone-cell";
 import useCancelInvitation from "@/hooks/mutations/workspace-user/use-cancel-invitation";
 import useDeleteWorkspaceUser from "@/hooks/mutations/workspace-user/use-delete-workspace-user";
 import useUpdateWorkspaceUserRole from "@/hooks/mutations/workspace-user/use-update-workspace-user-role";
@@ -22,10 +23,6 @@ import type {
   WorkspaceUser,
   WorkspaceUserInvitation,
 } from "@/types/workspace-user";
-import {
-  AnotaPhoneCell,
-  AnotaPhoneProvider,
-} from "../../anota/anota-phone-cell";
 import { useAuth } from "../providers/auth-provider/hooks/use-auth";
 import {
   AlertDialog,
@@ -198,11 +195,9 @@ function MembersTable({ workspaceId, invitations, users }: Props) {
             <TableHead className="text-foreground font-medium">
               {t("team:membersTable.columns.role", { defaultValue: "Role" })}
             </TableHead>
-            {/* Anota mount point (ONBOARD-10, D-25) — see ../../anota/anota-phone-cell.tsx */}
+            {/* Anota mount point (ONBOARD-10, D-25) — see @/anota/anota-phone-cell.tsx */}
             <TableHead className="text-foreground font-medium">
-              {t("team:membersTable.columns.phone", {
-                defaultValue: "Phone",
-              })}
+              {t("team:membersTable.columns.phone", { defaultValue: "Phone" })}
             </TableHead>
             <TableHead className="text-foreground font-medium">
               {t("team:membersTable.columns.joined", {
